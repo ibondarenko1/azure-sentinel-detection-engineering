@@ -1,0 +1,103 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "comments": "SOAR playbook for SC200-04 (Mass resource deletion). On the incident, a managed-identity Logic App tags it 'auto-triaged' and posts an enrichment comment. No external connector / no stored secret."
+  },
+  "parameters": {
+    "playbookName": { "type": "string", "defaultValue": "pb-mass-deletion-response" },
+    "location": { "type": "string", "defaultValue": "[resourceGroup().location]" }
+  },
+  "variables": {
+    "sentinelConnName": "azuresentinel-mi",
+    "sentinelConnId": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Web/locations/', parameters('location'), '/managedApis/azuresentinel')]",
+    "responderRoleId": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Authorization/roleDefinitions/3e150937-b8fe-4cfb-8069-0eaf05ecd056')]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Web/connections",
+      "apiVersion": "2016-06-01",
+      "name": "[variables('sentinelConnName')]",
+      "location": "[parameters('location')]",
+      "kind": "V1",
+      "properties": {
+        "displayName": "[variables('sentinelConnName')]",
+        "customParameterValues": {},
+        "parameterValueType": "Alternative",
+        "api": { "id": "[variables('sentinelConnId')]" }
+      }
+    },
+    {
+      "type": "Microsoft.Logic/workflows",
+      "apiVersion": "2019-05-01",
+      "name": "[parameters('playbookName')]",
+      "location": "[parameters('location')]",
+      "identity": { "type": "SystemAssigned" },
+      "dependsOn": [ "[resourceId('Microsoft.Web/connections', variables('sentinelConnName'))]" ],
+      "properties": {
+        "state": "Enabled",
+        "definition": {
+          "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+          "contentVersion": "1.0.0.0",
+          "parameters": {
+            "$connections": { "type": "Object", "defaultValue": {} }
+          },
+          "triggers": {
+            "Microsoft_Sentinel_incident": {
+              "type": "ApiConnectionWebhook",
+              "inputs": {
+                "body": { "callback_url": "@{listCallbackUrl()}" },
+                "host": { "connection": { "name": "@parameters('$connections')['azuresentinel']['connectionId']" } },
+                "path": "/incident-creation"
+              }
+            }
+          },
+          "actions": {
+            "Add_tag_auto-triaged": {
+              "type": "ApiConnection",
+              "inputs": {
+                "host": { "connection": { "name": "@parameters('$connections')['azuresentinel']['connectionId']" } },
+                "method": "put",
+                "path": "/Incidents/Tag",
+                "body": {
+                  "incidentArmId": "@triggerBody()?['object']?['id']",
+                  "tags": [ { "Tag": "auto-triaged" } ]
+                }
+              }
+            },
+            "Add_enrichment_comment": {
+              "type": "ApiConnection",
+              "runAfter": { "Add_tag_auto-triaged": [ "Succeeded" ] },
+              "inputs": {
+                "host": { "connection": { "name": "@parameters('$connections')['azuresentinel']['connectionId']" } },
+                "method": "post",
+                "path": "/Incidents/Comment",
+                "body": {
+                  "incidentArmId": "@triggerBody()?['object']?['id']",
+                  "message": "Auto-triage (SC200-04 Mass resource deletion): destructive-impact pattern detected. Suggested response — disable/quarantine the caller, lock affected resource groups (CanNotDelete), restore from backup, hunt initial access. See investigations/INV-01."
+                }
+              }
+            }
+          },
+          "outputs": {}
+        },
+        "parameters": {
+          "$connections": {
+            "value": {
+              "azuresentinel": {
+                "connectionId": "[resourceId('Microsoft.Web/connections', variables('sentinelConnName'))]",
+                "connectionName": "[variables('sentinelConnName')]",
+                "id": "[variables('sentinelConnId')]",
+                "connectionProperties": { "authentication": { "type": "ManagedServiceIdentity" } }
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "outputs": {
+    "playbookResourceId": { "type": "string", "value": "[resourceId('Microsoft.Logic/workflows', parameters('playbookName'))]" },
+    "playbookPrincipalId": { "type": "string", "value": "[reference(resourceId('Microsoft.Logic/workflows', parameters('playbookName')), '2019-05-01', 'Full').identity.principalId]" }
+  }
+}

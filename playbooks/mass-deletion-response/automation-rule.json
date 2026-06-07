@@ -1,0 +1,34 @@
+{
+  "_comment": "Sentinel automation rule body. PUT to .../providers/Microsoft.SecurityInsights/automationRules/<new-guid>?api-version=2025-09-01 after substituting the <...> placeholders (see ../README.md). Placeholders keep the subscription/tenant identifiers out of the public repo.",
+  "properties": {
+    "displayName": "SC200-04 Mass deletion -> auto-triage playbook",
+    "order": 1,
+    "triggeringLogic": {
+      "isEnabled": true,
+      "triggersOn": "Incidents",
+      "triggersWhen": "Created",
+      "conditions": [
+        {
+          "conditionType": "Property",
+          "conditionProperties": {
+            "propertyName": "IncidentRelatedAnalyticRuleIds",
+            "operator": "Contains",
+            "propertyValues": [
+              "/subscriptions/<SUBSCRIPTION_ID>/resourceGroups/<RG>/providers/Microsoft.OperationalInsights/workspaces/<WORKSPACE>/providers/Microsoft.SecurityInsights/alertRules/139a66be-c7a6-4518-9404-b811caab736d"
+            ]
+          }
+        }
+      ]
+    },
+    "actions": [
+      {
+        "order": 1,
+        "actionType": "RunPlaybook",
+        "actionConfiguration": {
+          "logicAppResourceId": "/subscriptions/<SUBSCRIPTION_ID>/resourceGroups/<RG>/providers/Microsoft.Logic/workflows/pb-mass-deletion-response",
+          "tenantId": "<TENANT_ID>"
+        }
+      }
+    ]
+  }
+}

@@ -82,6 +82,10 @@ A coverage map with **explicit gaps** is honester than a list of rules. The [ATT
 
 The gaps *are* the roadmap — they say where this goes next.
 
+## Automated response (SOAR)
+
+The highest-severity detection closes the loop **detect → respond**. A Sentinel automation rule runs a [Logic App playbook](playbooks/mass-deletion-response) on every SC200-04 (mass deletion) incident: it tags the incident `auto-triaged` and posts an enrichment comment with the recommended containment. The playbook uses its own **managed identity** (Sentinel Responder) — no secrets, no external connector.
+
 ## Repository layout
 
 ```
@@ -92,13 +96,15 @@ sigma/            vendor-neutral Sigma conversions (portable to any SIEM)
 kql/              analytics-rule queries + hunting library
 investigations/   end-to-end incident write-ups
 simulations/      exact atomic-aligned trigger steps
+navigator/        ATT&CK coverage layer (covered + gaps)
+playbooks/        SOAR response (Logic App + automation rule)
 docs/             architecture · methodology · cicd · validation
 screenshots/      visual evidence
 ```
 
 ## Skills demonstrated
 
-KQL · Microsoft Sentinel scheduled analytics rules · Microsoft Defender XDR · Detection-as-Code (GitHub Actions, OIDC) · Sigma (vendor-neutral) · Atomic Red Team validation · incident triage & investigation · MITRE ATT&CK mapping · Azure control-plane (Activity Log) monitoring.
+KQL · Microsoft Sentinel scheduled analytics rules · Microsoft Defender XDR · Detection-as-Code (GitHub Actions, OIDC) · SOAR (Logic Apps automation rules) · Sigma (vendor-neutral) · Atomic Red Team validation · incident triage & investigation · MITRE ATT&CK mapping · Azure control-plane (Activity Log) monitoring.
 
 ## Disclaimer
 
