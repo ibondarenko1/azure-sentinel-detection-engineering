@@ -23,7 +23,9 @@ flowchart LR
 
 - Source of truth: [`detections/rules/*.yaml`](detections/rules) · Pipeline: [`.github/workflows/deploy-detections.yml`](.github/workflows/deploy-detections.yml) · Deployer/validator: [`cicd/`](cicd) · Details: [docs/03-cicd.md](docs/03-cicd.md)
 
-That step — *rules deploy automatically from git by reviewed PR* — is what separates a detection **engineer** from an analyst who finished a course.
+![CI/CD pipeline runs](screenshots/10-cicd-pipeline.png)
+
+A real change went through it: [PR #1](https://github.com/ibondarenko1/azure-soc-detection-lab/pull/1) tightened the SC200-01 threshold (10 → 8); CI validated it, merge deployed it to the live `sc200-ws` rule. That step — *rules deploy automatically from git by reviewed PR* — is what separates a detection **engineer** from an analyst who finished a course.
 
 ## Lab architecture
 
