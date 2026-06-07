@@ -2,6 +2,8 @@
 
 Detection-engineering portfolio built on a **live Microsoft Sentinel + Defender XDR** tenant. Five custom analytics rules watch Azure control-plane activity, each mapped to MITRE ATT&CK, each proven end-to-end: a benign simulated action triggers the rule, the rule raises an incident, and the incident is investigated and documented.
 
+![Detection lab tour — telemetry, rules, incidents, CI/CD pipeline](screenshots/demo.gif)
+
 > Built while earning **Microsoft Certified: Security Operations Analyst Associate (SC-200)**. Workspace: `sc200-ws`. All evidence is from a personal lab tenant; tenant/subscription identifiers and any PII are redacted in screenshots.
 
 ![deploy-detections](https://github.com/ibondarenko1/azure-soc-detection-lab/actions/workflows/deploy-detections.yml/badge.svg)
