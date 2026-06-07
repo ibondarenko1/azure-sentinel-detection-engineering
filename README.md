@@ -68,6 +68,20 @@ Two incidents are written up as full investigations:
 - [INV-01 — Mass resource deletion (High)](investigations/INV-01-mass-resource-deletion.md)
 - [INV-02 — RBAC privilege escalation](investigations/INV-02-rbac-privilege-escalation.md)
 
+## ATT&CK coverage
+
+A coverage map with **explicit gaps** is honester than a list of rules. The [ATT&CK Navigator layer](navigator/coverage-layer.json) ([how to load](navigator/README.md)) shows both:
+
+| Covered (deployed rule) | Known gap (backlog) |
+|-------------------------|---------------------|
+| T1087 Account Discovery — SC200-01 | T1078 Valid Accounts — no sign-in anomaly detection |
+| T1562.007 Disable/Modify Cloud Firewall — SC200-02 | T1110 Brute Force — no auth-failure correlation |
+| T1098.003 Additional Cloud Roles — SC200-03 | T1530 Data from Cloud Storage — no data-plane detection |
+| T1485 Data Destruction — SC200-04 | T1496 Resource Hijacking — no spend/mining anomaly |
+| T1098 Account Manipulation — SC200-03 / SC200-05 | T1526 Cloud Service Discovery — only partial |
+
+The gaps *are* the roadmap — they say where this goes next.
+
 ## Repository layout
 
 ```

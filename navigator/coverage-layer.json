@@ -1,0 +1,35 @@
+{
+  "name": "Azure SOC Detection Lab — Coverage",
+  "versions": { "attack": "15", "navigator": "4.9.1", "layer": "4.5" },
+  "domain": "enterprise-attack",
+  "description": "Coverage of the 5 SC200 AzureActivity detections, with honest gaps in the same tactics. Green = covered by a deployed rule; red = known gap.",
+  "sorting": 0,
+  "hideDisabled": false,
+  "techniques": [
+    { "techniqueID": "T1087", "score": 100, "color": "#2da44e", "comment": "SC200-01 Failed Activity Log operations spike (heuristic — failed-permission probing)" },
+    { "techniqueID": "T1562.007", "score": 100, "color": "#2da44e", "comment": "SC200-02 Network Security Group rule modified" },
+    { "techniqueID": "T1562", "score": 100, "color": "#2da44e", "comment": "Covered via sub-technique T1562.007 (SC200-02)" },
+    { "techniqueID": "T1098.003", "score": 100, "color": "#2da44e", "comment": "SC200-03 RBAC role assignment changes" },
+    { "techniqueID": "T1098", "score": 100, "color": "#2da44e", "comment": "SC200-03 (T1098.003) + SC200-05 non-owner deployment (loose)" },
+    { "techniqueID": "T1485", "score": 100, "color": "#2da44e", "comment": "SC200-04 Mass resource deletion" },
+
+    { "techniqueID": "T1078", "score": 25, "color": "#e85d4c", "comment": "GAP — Valid Accounts: no sign-in / impossible-travel anomaly detection yet" },
+    { "techniqueID": "T1110", "score": 25, "color": "#e85d4c", "comment": "GAP — Brute Force: no auth-failure correlation on sign-ins" },
+    { "techniqueID": "T1526", "score": 25, "color": "#e85d4c", "comment": "GAP — Cloud Service Discovery: only partially implied by SC200-01" },
+    { "techniqueID": "T1530", "score": 25, "color": "#e85d4c", "comment": "GAP — Data from Cloud Storage: no storage data-plane access detection" },
+    { "techniqueID": "T1496", "score": 25, "color": "#e85d4c", "comment": "GAP — Resource Hijacking: no crypto-mining / spend-anomaly detection" }
+  ],
+  "gradient": { "colors": ["#ffffff", "#2da44e"], "minValue": 0, "maxValue": 100 },
+  "legendItems": [
+    { "label": "Covered by a deployed detection", "color": "#2da44e" },
+    { "label": "Known gap (not yet covered)", "color": "#e85d4c" }
+  ],
+  "metadata": [
+    { "name": "rules", "value": "5 scheduled analytics rules on AzureActivity" },
+    { "name": "repo", "value": "github.com/ibondarenko1/azure-soc-detection-lab" }
+  ],
+  "showTacticRowBackground": true,
+  "tacticRowBackground": "#205b8f",
+  "selectTechniquesAcrossTactics": true,
+  "selectSubtechniquesWithParent": false
+}
