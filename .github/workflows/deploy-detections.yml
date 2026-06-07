@@ -5,14 +5,10 @@ name: deploy-detections
 #   push to main -> deploy rules to Microsoft Sentinel via OIDC (no secrets)
 
 on:
-  pull_request:
-    paths:
-      - "detections/rules/**"
-      - "cicd/**"
-      - ".github/workflows/deploy-detections.yml"
+  pull_request:        # validate runs on every PR (keeps the required check consistent)
   push:
     branches: [main]
-    paths:
+    paths:             # deploy only when rules or pipeline change
       - "detections/rules/**"
       - "cicd/**"
 
