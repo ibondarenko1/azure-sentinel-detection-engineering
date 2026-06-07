@@ -40,5 +40,12 @@ This detection's alert appears in the consolidated [SC200 alert queue](../screen
 
 ## Tuning notes
 
-- Expect noise from legitimate network changes; pair with a change-management allow-list or restrict to "rule allows Any source" for higher fidelity.
-- Escalate severity when the new rule opens a management port (22/3389/5985) from `*`/`Internet`.
+**Threshold rationale.** No count threshold — any NSG `securityRules` write/delete is surfaced, because a single rule change can fully open an attack path.
+
+**Known false positives.** Legitimate network change management; IaC applying NSG updates. Pair with a change-management allow-list, or scope to "rule allows source `*`/`Internet` on a management port" for higher fidelity.
+
+**Tightening trade-off.** Filtering to only internet-facing management ports cuts noise hard but misses lateral-movement enablers (e.g. opening SMB/WinRM internally).
+
+**Evasion.** An attacker can avoid NSG writes entirely by attaching resources to a permissive existing subnet, modifying a route table or Azure Firewall instead, or disabling NSG flow logs. Treat this as one signal among network-change detections, not a sole control.
+
+**Validation.** ATT&CK [T1562.007](https://attack.mitre.org/techniques/T1562/007/) — Disable or Modify Cloud Firewall; covered by [automated regression](../docs/04-validation.md).

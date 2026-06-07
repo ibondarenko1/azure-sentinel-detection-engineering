@@ -43,5 +43,12 @@ Query results in the alert show the caller and per-5-minute delete counts (8 and
 
 ## Tuning notes
 
-- Threshold (`>= 5` delete operations per 5-minute bin, per caller) balances catching real wipes against normal teardown of test environments.
-- Exclude known IaC/automation principals that legitimately tear down ephemeral resources, or raise their threshold separately.
+**Threshold rationale.** `>= 5` delete operations per 5-minute bin per caller — balances catching a real wipe against routine teardown of a small test environment.
+
+**Known false positives.** IaC / automation legitimately tearing down ephemeral resources; scheduled environment cleanups. Exclude known automation principals, or give them a separate higher threshold.
+
+**Tightening trade-off.** Raising to ≥20 removes most automation noise but lets a slow, deliberate wipe (4 deletes every 5 minutes) slip under the bar; lowering to ≥2 is too noisy for any active subscription.
+
+**Evasion.** A careful actor deletes just under the rate limit, spreads deletes across principals or subscriptions, or removes resource locks first (itself a signal worth detecting). Consider a companion rule on `Microsoft.Authorization/locks/delete` and a longer-window cumulative-count variant.
+
+**Validation.** ATT&CK [T1485](https://attack.mitre.org/techniques/T1485/) — Data Destruction; covered by [automated regression](../docs/04-validation.md).

@@ -57,3 +57,7 @@ AzureActivity
 
 - Maintain the `owners` allow-list as the core of fidelity; everyone legitimately deploying must be enumerated.
 - Resource type matters — a new `Microsoft.Compute` (VM) by a non-owner is higher signal than storage.
+
+**Evasion.** Even the v2 logic is evaded by an attacker who first adds their principal to the `owners` set (→ chain with [SC200-03](SC200-03-rbac-role-assignment-changes.md)), or deploys a resource type outside the watch-list.
+
+**Validation.** ATT&CK [T1098](https://attack.mitre.org/techniques/T1098/) — loose mapping (resource-creation persistence); validated manually, not in automated regression. See [docs/04-validation.md](../docs/04-validation.md).

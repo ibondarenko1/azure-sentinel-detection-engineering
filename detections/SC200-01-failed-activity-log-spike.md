@@ -23,7 +23,7 @@ AzureActivity
 | where TimeGenerated > ago(1h)
 | where ActivityStatusValue == "Failure"
 | summarize FailureCount = count() by Caller, bin(TimeGenerated, 5m)
-| where FailureCount >= 10
+| where FailureCount >= 8
 ```
 
 ## How to trigger (simulation)
@@ -40,5 +40,12 @@ This detection's alert appears in the consolidated [SC200 alert queue](../screen
 
 ## Tuning notes
 
-- Threshold (`>= 10` failures per 5-minute bin, per caller) clears normal transient failures (token refresh, eventual-consistency retries) while catching a deliberate probing burst.
-- Common benign sources: automation principals hitting RBAC limits, IaC drift. Maintain an allow-list of known service principals before raising severity.
+**Threshold rationale.** `>= 8` failures per 5-minute bin per caller (tightened from 10 via [PR #1](https://github.com/ibondarenko1/azure-soc-detection-lab/pull/1)) — clears normal transient failures (token refresh, eventual-consistency retries) while catching a deliberate probing burst.
+
+**Known false positives.** Automation / service principals hitting RBAC limits; IaC drift and failed deployments that retry. Allow-list known service principals before raising severity.
+
+**Tightening trade-off.** Lowering further (e.g. ≥5) catches slower probing but starts alerting on routine automation noise; raising it risks missing a careful actor.
+
+**Evasion.** An attacker stays under the bar by spreading failures across time bins or across principals, or by avoiding failures entirely (read-only enumeration that succeeds). Defence-in-depth: pair with [SC200-03](SC200-03-rbac-role-assignment-changes.md) and Entra sign-in anomaly detections.
+
+**Validation.** ATT&CK [T1087](https://attack.mitre.org/techniques/T1087/) / T1526 — heuristic (failed-permission probing); see [docs/04-validation.md](../docs/04-validation.md).

@@ -42,5 +42,12 @@ Full investigation: [INV-02](../investigations/INV-02-rbac-privilege-escalation.
 
 ## Tuning notes
 
-- High-privilege roles (Owner, Contributor, User Access Administrator) should drive higher severity than Reader.
-- Correlate the caller against expected admins; an assignment made by a non-admin principal is the strongest signal.
+**Threshold rationale.** No count threshold — every successful `roleAssignments` write/delete is reviewed, since one grant can be full persistence.
+
+**Known false positives.** Routine access administration / onboarding; PIM eligible-role activations; group-membership-driven access reviews.
+
+**Tightening trade-off.** Filtering to only Owner/Contributor/User Access Administrator (vs Reader) cuts volume sharply but misses scoped-but-sensitive data roles (e.g. Key Vault / Storage data roles) that also enable abuse.
+
+**Evasion.** A patient actor uses **PIM eligible** assignments (activate later), modifies an *existing* assignment's scope, grants via group membership, or assigns a custom role with an innocuous name. Enrich with the role granted and the caller's own privilege.
+
+**Validation.** ATT&CK [T1098.003](https://attack.mitre.org/techniques/T1098/003/) — Additional Cloud Roles; see [docs/04-validation.md](../docs/04-validation.md).
