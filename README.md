@@ -72,15 +72,15 @@ Two incidents are written up as full investigations:
 
 A coverage map with **explicit gaps** is honester than a list of rules. The [ATT&CK Navigator layer](navigator/coverage-layer.json) ([how to load](navigator/README.md)) shows both:
 
-| Covered (deployed rule) | Known gap (backlog) |
-|-------------------------|---------------------|
-| T1087 Account Discovery — SC200-01 | T1078 Valid Accounts — no sign-in anomaly detection |
-| T1562.007 Disable/Modify Cloud Firewall — SC200-02 | T1110 Brute Force — no auth-failure correlation |
-| T1098.003 Additional Cloud Roles — SC200-03 | T1530 Data from Cloud Storage — no data-plane detection |
-| T1485 Data Destruction — SC200-04 | T1496 Resource Hijacking — no spend/mining anomaly |
-| T1098 Account Manipulation — SC200-03 / SC200-05 | T1526 Cloud Service Discovery — only partial |
+| Covered (deployed rule) | Known gap → tracked as an issue |
+|-------------------------|---------------------------------|
+| T1087 Account Discovery — SC200-01 | [T1078 Valid Accounts](../../issues/10) — sign-in anomaly |
+| T1562.007 Disable/Modify Cloud Firewall — SC200-02 | [T1110 Brute Force](../../issues/11) — auth-failure correlation |
+| T1098.003 Additional Cloud Roles — SC200-03 | [T1530 Data from Cloud Storage](../../issues/12) — data-plane detection |
+| T1485 Data Destruction — SC200-04 | [T1496 Resource Hijacking](../../issues/13) — spend/mining anomaly |
+| T1098 Account Manipulation — SC200-03 / SC200-05 | [T1526 Cloud Service Discovery](../../issues/14) — strengthen heuristic |
 
-The gaps *are* the roadmap — they say where this goes next.
+The gaps aren't static text — each is a live [`detection-gap` issue](../../issues?q=is%3Aissue+label%3Adetection-gap), so the roadmap is a clickable backlog.
 
 ## Automated response (SOAR)
 
