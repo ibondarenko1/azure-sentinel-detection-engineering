@@ -57,7 +57,7 @@ flowchart LR
 | [DET-003](detections/DET-003-rbac-role-assignment-changes.md) | RBAC role assignment changes | Medium | Privilege Escalation / Persistence | [T1098](https://attack.mitre.org/techniques/T1098/) Account Manipulation |
 | [DET-004](detections/DET-004-mass-resource-deletion.md) | Mass resource deletion | **High** | Impact | [T1485](https://attack.mitre.org/techniques/T1485/) Data Destruction |
 | [DET-005](detections/DET-005-suspicious-deployment-non-owner.md) | Suspicious resource deployment by non-owner | Medium | Persistence | [T1098](https://attack.mitre.org/techniques/T1098/) Account Manipulation |
-| [DET-006](detections/DET-006-lsass-credential-access.md) | LSASS credential access (endpoint, witness pending) | **High** | Credential Access | [T1003.001](https://attack.mitre.org/techniques/T1003/001/) LSASS Memory |
+| [DET-006](detections/DET-006-lsass-credential-access.md) | LSASS credential access (endpoint) | **High** | Credential Access | [T1003.001](https://attack.mitre.org/techniques/T1003/001/) LSASS Memory |
 
 ![Detection rules overview](screenshots/02-detection-rules-overview.png)
 
@@ -67,9 +67,10 @@ Each detection was triggered with a controlled, self-reverted administrative act
 
 ![Incidents queue](screenshots/05-incidents-queue-populated.png)
 
-Two incidents are written up as full investigations:
+Three incidents are written up as full investigations:
 - [INV-01, Mass resource deletion (High)](investigations/INV-01-mass-resource-deletion.md)
 - [INV-02, RBAC privilege escalation](investigations/INV-02-rbac-privilege-escalation.md)
+- [INV-03, LSASS credential access (High)](investigations/INV-03-lsass-credential-access.md), endpoint, Incident #65
 
 ## ATT&CK coverage
 
@@ -91,7 +92,7 @@ The highest-severity detection closes the loop from detect to respond. A Sentine
 
 ## Endpoint and vulnerability management
 
-The detections start on the Azure control plane; this phase adds the endpoint plane. A Defender for Endpoint sensor on a Windows server feeds the same workspace, so the Detection-as-Code pipeline deploys an endpoint rule, [DET-006 LSASS credential access](detections/DET-006-lsass-credential-access.md), next to the control-plane rules. Defender Vulnerability Management adds a second input: a [hunting library](kql/hunting) that surfaces critical CVEs on servers, failed secure-configuration baselines, and vulnerable assets under active alert. The `DeviceTvm*` tables live only in Defender advanced hunting, so those correlations are hunts, not deployed rules, and the repo says where each query actually runs. Architecture and data flow: [docs/07](docs/07-endpoint-vulnerability-management.md).
+The detections start on the Azure control plane; this phase adds the endpoint plane. A Defender for Endpoint sensor on a Windows host feeds the same workspace, so the Detection-as-Code pipeline deploys an endpoint rule, [DET-006 LSASS credential access](detections/DET-006-lsass-credential-access.md), next to the control-plane rules. DET-006 is multi-source and witnessed: three credential-dump techniques were run against the sensor, the hardened host (LSASS RunAsPPL, AMSI, behavioral protection) prevented every one, and the rule fired on the resulting Defender alerts to raise [Incident #65](investigations/INV-03-lsass-credential-access.md). Defender Vulnerability Management adds a second input: a [hunting library](kql/hunting) that surfaces critical CVEs by exposed software, failed secure-configuration baselines, and vulnerable assets under active alert. The `DeviceTvm*` tables live only in Defender advanced hunting, so those correlations are hunts, not deployed rules, and the repo says where each query actually runs. Architecture and data flow: [docs/07](docs/07-endpoint-vulnerability-management.md).
 
 ## Repository layout
 

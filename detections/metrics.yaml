@@ -45,9 +45,9 @@ DET-005:
 
 DET-006:
   name: LSASS credential access
-  dataPlane: "Defender for Endpoint DeviceEvents (via Defender XDR connector)"
-  expectedEventVolumePerDay: "~0 on a server (LSASS access outside the Defender stack is exceptional)"
-  observedFalsePositiveRate: "n/a, live witness pending (sensor onboarded 2026-06-07)"
-  truePositivesObserved: 0          # authored, controlled trigger not yet captured
+  dataPlane: "Defender for Endpoint Device* events + MDATP alerts (via Defender XDR connector)"
+  expectedEventVolumePerDay: "~0 (LSASS access outside the Defender stack is exceptional)"
+  observedFalsePositiveRate: "n/a in this environment (only the authorised validation attempts fired)"
+  truePositivesObserved: 1          # incident #65 (controlled T1003.001 attempt, prevented)
   ruleIntervalMinutes: 15
-  mttdMinutesObserved: null         # pending first firing
+  mttdMinutesObserved: 18

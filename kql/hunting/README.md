@@ -9,10 +9,10 @@ workspace, so these are hunts rather than deployed rules. Context: [docs/07](../
 
 | File | What it hunts | Source |
 |------|---------------|--------|
-| [`endpoint-lsass-access.kql`](endpoint-lsass-access.kql) | LSASS handle-opens with command-line context (companion to DET-006) | DeviceEvents |
-| [`endpoint-critical-cve-exposed-server.kql`](endpoint-critical-cve-exposed-server.kql) | High-CVSS vulnerabilities on server-role hosts | DeviceTvmSoftwareVulnerabilities ⨝ DeviceInfo |
-| [`endpoint-failed-security-baseline.kql`](endpoint-failed-security-baseline.kql) | Failed secure-configuration assessments (hardening feedback) | DeviceTvmSecureConfigurationAssessment |
-| [`endpoint-vulnerable-asset-under-alert.kql`](endpoint-vulnerable-asset-under-alert.kql) | Vulnerable assets correlated with an active alert | AlertEvidence ⨝ DeviceTvmSoftwareVulnerabilities |
+| [`endpoint-lsass-access.kql`](endpoint-lsass-access.kql) | Every LSASS credential-theft signal (handle-open, dump-tool command line, Defender prevention) — companion to DET-006 | DeviceEvents ∪ DeviceProcessEvents ∪ AlertInfo ⨝ AlertEvidence |
+| [`endpoint-critical-cve-exposed.kql`](endpoint-critical-cve-exposed.kql) | Critical/High CVEs by exposed software, KB-scored for CVSS and exploit availability | DeviceTvmSoftwareVulnerabilities ⨝ DeviceTvmSoftwareVulnerabilitiesKB |
+| [`endpoint-failed-security-baseline.kql`](endpoint-failed-security-baseline.kql) | Failed secure-configuration assessments by category, ranked by impact (hardening feedback) | DeviceTvmSecureConfigurationAssessment |
+| [`endpoint-vulnerable-asset-under-alert.kql`](endpoint-vulnerable-asset-under-alert.kql) | Vulnerable assets correlated with an active alert | AlertEvidence ⨝ AlertInfo ⨝ DeviceTvmSoftwareVulnerabilities |
 
 ## Email and phishing (planned)
 

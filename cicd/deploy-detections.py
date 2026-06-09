@@ -47,7 +47,12 @@ def az(*args, body=None):
 
 def build_properties(rule):
     op = TRIGGER_OP.get(str(rule.get("triggerOperator", "gt")).lower(), "GreaterThan")
-    return {
+    # The alertRules API wants parent techniques in `techniques` (T####) and
+    # sub-techniques in `subTechniques` (T####.###); splitting keeps both valid.
+    techs = rule.get("relevantTechniques", [])
+    parents = sorted({t.split(".")[0] for t in techs})
+    subs = sorted(t for t in techs if "." in t)
+    props = {
         "displayName": rule["name"],
         "description": rule.get("description", ""),
         "severity": rule["severity"],
@@ -60,7 +65,7 @@ def build_properties(rule):
         "suppressionDuration": "PT1H",
         "suppressionEnabled": False,
         "tactics": rule.get("tactics", []),
-        "techniques": rule.get("relevantTechniques", []),
+        "techniques": parents,
         "entityMappings": rule.get("entityMappings"),
         "incidentConfiguration": {
             "createIncident": True,
@@ -68,6 +73,9 @@ def build_properties(rule):
                                        "matchingMethod": "AllEntities", "reopenClosedIncident": False},
         },
     }
+    if subs:
+        props["subTechniques"] = subs
+    return props
 
 
 def main():
