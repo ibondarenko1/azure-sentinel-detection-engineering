@@ -1,12 +1,17 @@
 # Machine-readable per-detection metrics.
-# Volume / FP rate are single-tenant observations; production numbers would
-# replace them. truePositivesObserved references the real incidents this repo raised.
+# truePositivesObserved references the real incidents this repo raised.
 # mttdMinutesObserved = scheduled-rule interval + observed ingestion lag.
+# observedFalsePositiveRate: a single-tenant lab cannot produce a meaningful FP RATE
+# (N is tiny; "0%" at N=1 is absence of data, not a measurement). Each rule states the
+# honest position plus how FP would actually be measured in production: the share of
+# that rule's incidents closed as benign over a rolling 30 days, driven down by tuning
+# (allow-list watchlists, thresholds). Where a benign baseline volume is knowable it is
+# given instead.
 
 DET-001:
   name: Failed Activity Log operations spike
   expectedEventVolumePerDay: "<1 (admin-plane failures are rare outside probing)"
-  observedFalsePositiveRate: "0% (no benign caller crossed >=8/5m in this environment)"
+  observedFalsePositiveRate: "not measurable at lab scale; in prod = share of these incidents closed-as-benign over 30d. Benign baseline here: 0 callers crossed >=8 failures/5m outside the simulation"
   truePositivesObserved: 1          # incident #4
   ruleIntervalMinutes: 15
   mttdMinutesObserved: 18
@@ -30,7 +35,7 @@ DET-003:
 DET-004:
   name: Mass resource deletion
   expectedEventVolumePerDay: "~0 (bulk delete is exceptional)"
-  observedFalsePositiveRate: "0% (no benign teardown hit >=5/5m)"
+  observedFalsePositiveRate: "not measurable at lab scale; in prod = share of these incidents closed-as-benign over 30d. Benign baseline here: 0 teardowns hit >=5 deletes/5m outside the simulation"
   truePositivesObserved: 1          # incident #3 (DeleteCount 8 then 5)
   ruleIntervalMinutes: 15
   mttdMinutesObserved: 18
@@ -47,7 +52,7 @@ DET-006:
   name: LSASS credential access
   dataPlane: "Defender for Endpoint Device* events + MDATP alerts (via Defender XDR connector)"
   expectedEventVolumePerDay: "~0 (LSASS access outside the Defender stack is exceptional)"
-  observedFalsePositiveRate: "n/a in this environment (only the authorised validation attempts fired)"
+  observedFalsePositiveRate: "not measurable at lab scale; in prod = share of these incidents closed-as-benign over 30d. Here only the authorised validation attempts fired"
   truePositivesObserved: 1          # incident #65 (controlled T1003.001 attempt, prevented)
   ruleIntervalMinutes: 15
   mttdMinutesObserved: 18
