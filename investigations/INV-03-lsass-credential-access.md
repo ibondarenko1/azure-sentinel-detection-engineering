@@ -21,7 +21,9 @@
 - **Host:** `soc-sensor-01`, reporting Active in Device Inventory.
 - **Account / process tree:** `NT AUTHORITY\SYSTEM`, `cmd.exe → powershell.exe -ExecutionPolicy Unrestricted -File <script>.ps1` (the management channel used to drive the controlled test).
 
-The prevention raised a Defender incident on `soc-sensor-01` (Endpoint / Antivirus), shown in the [incidents queue](../screenshots/05-incidents-queue-populated.png), and DET-006 raised the correlated Sentinel incident; the [DET-006 rule](../screenshots/02-detection-rules-overview.png) and the [Sentinel state](../screenshots/11-sentinel-overview.png) are captured alongside.
+![DET-006 incident #65](../screenshots/10-inc-06-lsass.png)
+
+DET-006 raised Sentinel incident #65 with `soc-sensor-01` as the host entity and Credential Access as the tactic. The prevention also raised a Defender incident on the same host (Endpoint / Antivirus), shown in the [incidents queue](../screenshots/05-incidents-queue-populated.png); the [DET-006 rule](../screenshots/02-detection-rules-overview.png) is in the deployed catalog.
 
 ## 2. What generated the activity
 

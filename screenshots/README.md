@@ -14,14 +14,15 @@ Visual evidence for these detections. Full unredacted captures are staged in `_r
 | `07-tvm-weaknesses.png` | Defender Vulnerability Management, OpenSSL critical CVEs (CVSS 9.8), 3 critical / 19 in org |
 | `08-device-active.png` | Device inventory, `soc-sensor-01` Active and Onboarded (Windows 11 sensor) |
 | `09-secure-score.png` | Microsoft Secure Score posture for the tenant |
+| `10-inc-06-lsass.png` | Sentinel incident #65 `[DET] LSASS credential access` (High), host `soc-sensor-01`, tactic Credential Access |
 | `11-sentinel-overview.png` | Microsoft Sentinel overview, incident queue + analytics-rule state |
 
 ## Redaction
 
 The top crop removes the browser URL bar (which carried the tenant ID). The portal captures
-(`02`, `05`, `07`, `08`, `09`, `11`) additionally have the top-right account chip blacked out, which
-carried the UPN, the organization name, and the profile photo. Subscription IDs are not visible in
-any captured frame.
+(`02`, `05`, `07`, `08`, `09`, `10`, `11`) additionally have the top-right account chip blacked out,
+which carried the UPN, the organization name, and the profile photo. On `10` the incident-link field
+(which carried the subscription id) is also blacked out. No subscription IDs are visible in any frame.
 
 Still review before publishing:
 
