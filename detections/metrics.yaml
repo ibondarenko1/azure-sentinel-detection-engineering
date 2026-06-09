@@ -74,3 +74,12 @@ DET-008:
   truePositivesObserved: 0          # authored + fixture-validated; live witness pending sign-in data
   ruleIntervalMinutes: 15
   mttdMinutesObserved: null         # pending first live sign-in burst
+
+DET-009:
+  name: NSG rule change exposed inbound from Any
+  dataPlane: "AzureActivity change event joined to ARG-sourced NSG config (soc-open-mgmt-nsg-rules watchlist, refreshed by the nsg-posture-watchlist Action)"
+  expectedEventVolumePerDay: "~0; only NSG changes that leave the NSG open inbound from Any"
+  observedFalsePositiveRate: "not measurable at lab scale; far below DET-002 by construction (requires the NSG to actually be open, not just changed)"
+  truePositivesObserved: 0          # authored + fixture-validated; live witness pending a controlled open-rule
+  ruleIntervalMinutes: 60
+  mttdMinutesObserved: null

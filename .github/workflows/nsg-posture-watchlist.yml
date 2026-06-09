@@ -1,0 +1,67 @@
+name: nsg-posture-watchlist
+
+# Refreshes the soc-open-mgmt-nsg-rules Sentinel watchlist from Azure Resource Graph: the NSGs
+# that currently expose inbound Allow-from-Any. DET-009 joins this content to the AzureActivity
+# change event to flag a change that actually opened the NSG. OIDC, no stored secrets.
+
+on:
+  schedule:
+    - cron: "17 * * * *"   # hourly, offset to avoid the top-of-hour rush
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    env:
+      RG: sc200-lab
+      WS: sc200-ws
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      - name: Query ARG for NSGs open inbound from Any
+        run: |
+          az extension add --name resource-graph --only-show-errors || true
+          az graph query --first 1000 -q "resources \
+            | where type =~ 'microsoft.network/networksecuritygroups' \
+            | mv-expand rule = properties.securityRules \
+            | extend p = rule.properties \
+            | where tostring(p.access) =~ 'Allow' and tostring(p.direction) =~ 'Inbound' \
+            | where tostring(p.sourceAddressPrefix) in ('*','Internet','0.0.0.0/0') \
+            | project nsg = name, ruleName = tostring(rule.name), src = tostring(p.sourceAddressPrefix), ports = tostring(p.destinationPortRange)" \
+            --query "data" -o json > arg.json
+          python - <<'PY'
+          import json
+          rows = json.load(open("arg.json"))
+          lines = ["NsgName,RuleName,SourcePrefix,Ports"]
+          for r in rows:
+              vals = [str(r.get(k, "")).replace(",", " ") for k in ("nsg", "ruleName", "src", "ports")]
+              lines.append(",".join(vals))
+          if len(lines) == 1:
+              lines.append("placeholder-no-open-rules,,,")
+          open("watchlist.csv", "w").write("\n".join(lines))
+          print(f"{len(rows)} open NSG rule(s)")
+          PY
+      - name: Refresh soc-open-mgmt-nsg-rules watchlist
+        run: |
+          SUB="${{ vars.AZURE_SUBSCRIPTION_ID }}"
+          python - <<'PY'
+          import json, os
+          raw = open("watchlist.csv").read()
+          body = {"properties": {"displayName": "SOC open management NSG rules",
+                                 "source": "Local file", "provider": "Custom",
+                                 "description": "NSGs open inbound from Any (refreshed from ARG by nsg-posture-watchlist). Used by DET-009.",
+                                 "itemsSearchKey": "NsgName", "contentType": "text/csv", "rawContent": raw}}
+          json.dump(body, open("body.json", "w"))
+          PY
+          az rest --method put \
+            --url "https://management.azure.com/subscriptions/$SUB/resourceGroups/$RG/providers/Microsoft.OperationalInsights/workspaces/$WS/providers/Microsoft.SecurityInsights/watchlists/soc-open-mgmt-nsg-rules?api-version=2023-11-01" \
+            --headers "Content-Type=application/json" --body @body.json -o none
+          echo "watchlist refreshed"

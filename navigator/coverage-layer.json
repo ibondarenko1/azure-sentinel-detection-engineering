@@ -2,13 +2,13 @@
   "name": "Azure Sentinel Detection Engineering Coverage",
   "versions": { "attack": "15", "navigator": "4.9.1", "layer": "4.5" },
   "domain": "enterprise-attack",
-  "description": "Coverage of the deployed detections (6 AzureActivity control-plane incl. a multi-stage correlation, 1 Defender for Endpoint, 1 Entra ID identity), with honest gaps in the same tactics. Green = covered by a deployed rule; red = known gap.",
+  "description": "Coverage of the deployed detections (7 AzureActivity control-plane incl. a multi-stage correlation and an ARG-backed NSG content rule, 1 Defender for Endpoint, 1 Entra ID identity), with honest gaps in the same tactics. Green = covered by a deployed rule; red = known gap.",
   "sorting": 0,
   "hideDisabled": false,
   "techniques": [
     { "techniqueID": "T1087", "score": 100, "color": "#2da44e", "comment": "DET-001 Failed Activity Log operations spike (heuristic, failed-permission probing)" },
-    { "techniqueID": "T1562.007", "score": 100, "color": "#2da44e", "comment": "DET-002 Network Security Group rule modified" },
-    { "techniqueID": "T1562", "score": 100, "color": "#2da44e", "comment": "Covered via sub-technique T1562.007 (DET-002)" },
+    { "techniqueID": "T1562.007", "score": 100, "color": "#2da44e", "comment": "DET-002 NSG rule change + DET-009 content-confirmed open inbound (ARG)" },
+    { "techniqueID": "T1562", "score": 100, "color": "#2da44e", "comment": "Covered via sub-technique T1562.007 (DET-002 / DET-009)" },
     { "techniqueID": "T1098.003", "score": 100, "color": "#2da44e", "comment": "DET-003 RBAC role assignment changes" },
     { "techniqueID": "T1098", "score": 100, "color": "#2da44e", "comment": "DET-003 (T1098.003) + DET-005 non-owner deployment + DET-007 grant-then-deploy correlation" },
     { "techniqueID": "T1485", "score": 100, "color": "#2da44e", "comment": "DET-004 Mass resource deletion" },
@@ -27,7 +27,7 @@
     { "label": "Known gap (not yet covered)", "color": "#e85d4c" }
   ],
   "metadata": [
-    { "name": "rules", "value": "8 scheduled analytics rules (6 AzureActivity + 1 Defender for Endpoint + 1 Entra ID identity)" },
+    { "name": "rules", "value": "9 scheduled analytics rules (7 AzureActivity + 1 Defender for Endpoint + 1 Entra ID identity)" },
     { "name": "repo", "value": "github.com/ibondarenko1/azure-sentinel-detection-engineering" }
   ],
   "showTacticRowBackground": true,

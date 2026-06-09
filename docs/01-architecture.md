@@ -10,7 +10,7 @@
 
 | Source | Key tables | Used by |
 |--------|-----------|---------|
-| Azure subscription Activity Log | `AzureActivity` | the 6 control-plane detections (DET-001 to 005, and the DET-007 correlation) |
+| Azure subscription Activity Log | `AzureActivity` | the 7 control-plane detections (DET-001 to 005, the DET-007 correlation, and the DET-009 content rule) |
 | Microsoft Entra ID | `SigninLogs`, `AuditLogs` | DET-008 identity detection |
 | Microsoft Defender for Office 365 | `EmailEvents`, `EmailUrlInfo`, `UrlClickEvents`, `CampaignInfo` | hunting library |
 | Microsoft Defender for Endpoint | `Device*`, `DeviceTvm*` | DET-006 + hunting |

@@ -1,0 +1,12 @@
+{
+  "_comment": "DET-009 (AzureActivity + soc-open-mgmt-nsg-rules watchlist): fires when a successful NSG securityRules write targets an NSG that is currently open inbound from Any (present in the watchlist). Silent for a write on a non-open NSG, a non-securityRules op, or a failure. watchlist = NSG names currently open.",
+  "watchlist": ["nsg-open-test"],
+  "fires": [
+    {"ActivityStatusValue": "Success", "Caller": "attacker@contoso.com", "OperationNameValue": "Microsoft.Network/networkSecurityGroups/securityRules/write", "ResourceProviderValue": "Microsoft.Network", "ResourceId": "/subscriptions/x/rg/a/providers/Microsoft.Network/networkSecurityGroups/nsg-open-test/securityRules/open-rdp", "Properties_d": {"resource": "nsg-open-test/open-rdp", "httpRequest": "{\"clientIpAddress\":\"203.0.113.7\"}"}}
+  ],
+  "silent": [
+    {"ActivityStatusValue": "Success", "Caller": "attacker@contoso.com", "OperationNameValue": "Microsoft.Network/networkSecurityGroups/securityRules/write", "ResourceProviderValue": "Microsoft.Network", "ResourceId": "/subscriptions/x/rg/a/providers/Microsoft.Network/networkSecurityGroups/nsg-closed/securityRules/some-rule", "Properties_d": {"resource": "nsg-closed/some-rule"}},
+    {"ActivityStatusValue": "Success", "Caller": "ops@contoso.com", "OperationNameValue": "Microsoft.Network/virtualNetworks/write", "ResourceProviderValue": "Microsoft.Network", "ResourceId": "/subscriptions/x/rg/a/providers/Microsoft.Network/virtualNetworks/vnet1", "Properties_d": {"resource": "vnet1"}},
+    {"ActivityStatusValue": "Failure", "Caller": "attacker@contoso.com", "OperationNameValue": "Microsoft.Network/networkSecurityGroups/securityRules/write", "ResourceProviderValue": "Microsoft.Network", "ResourceId": "/subscriptions/x/rg/a/providers/Microsoft.Network/networkSecurityGroups/nsg-open-test/securityRules/denied", "Properties_d": {"resource": "nsg-open-test/denied"}}
+  ]
+}

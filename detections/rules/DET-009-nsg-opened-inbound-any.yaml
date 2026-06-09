@@ -1,0 +1,52 @@
+id: 9c3f4e5a-6d7b-48c9-a0e1-2f3a4b5c6d7e
+name: "[DET] NSG rule change exposed inbound from Any"
+description: |
+  Content-level companion to DET-002. DET-002 fires on any NSG securityRules change by a
+  non-automation principal but cannot read the rule body. This rule closes that gap by joining
+  the AzureActivity change event to the soc-open-mgmt-nsg-rules watchlist, which is refreshed from
+  Azure Resource Graph (the nsg-posture-watchlist GitHub Action) and lists NSGs that currently
+  expose inbound Allow-from-Any on a management port. A change event on an NSG that is now open is
+  the high-fidelity "opened inbound from the internet" signal.
+severity: High
+requiredDataConnectors:
+  - connectorId: AzureActivity
+    dataTypes:
+      - AzureActivity
+queryFrequency: PT1H
+queryPeriod: PT1H
+triggerOperator: gt
+triggerThreshold: 0
+tactics:
+  - DefenseEvasion
+relevantTechniques:
+  - T1562
+query: |
+  // soc-open-mgmt-nsg-rules: refreshed hourly from Azure Resource Graph by the
+  // nsg-posture-watchlist Action; SearchKey = NSG name currently open inbound from Any.
+  let openNsgs = _GetWatchlist('soc-open-mgmt-nsg-rules') | project SearchKey;
+  AzureActivity
+  | where TimeGenerated > ago(1h)
+  | where OperationNameValue has "Microsoft.Network/networkSecurityGroups/securityRules"
+  | where OperationNameValue endswith "/write"
+  | where ActivityStatusValue == "Success"
+  | extend NsgName = tostring(split(tostring(Properties_d.resource), "/")[0])
+  | where NsgName in~ (openNsgs)
+  | extend CallerIp = tostring(parse_json(tostring(Properties_d.httpRequest)).clientIpAddress)
+  | project TimeGenerated, Caller, CallerIp, NsgName, OperationNameValue, ResourceId
+entityMappings:
+  - entityType: Account
+    fieldMappings:
+      - identifier: FullName
+        columnName: Caller
+  - entityType: IP
+    fieldMappings:
+      - identifier: Address
+        columnName: CallerIp
+metadata:
+  atomic: "T1562.007, Disable or Modify Cloud Firewall, confirmed content-level (rule opened inbound Allow from Any/Internet on a management port)."
+  requiredFields: [AzureActivity.OperationNameValue, AzureActivity.ActivityStatusValue, AzureActivity.Caller, AzureActivity.Properties_d]
+  dataPlane: "AzureActivity change event joined to NSG rule config sourced from Azure Resource Graph via the soc-open-mgmt-nsg-rules watchlist."
+  falsePositives:
+    - "A management rule intentionally open to the internet (e.g. a documented jump host); exclude that NSG from the posture query or accept and tune."
+  severityRationale: "High. Unlike DET-002 (any NSG change), this fires only when the change left the NSG exposing inbound Allow-from-Any on a management port, the actual defense-weakening condition."
+  responseAction: "Inspect the rule (it is in the watchlist row), confirm the exposure is intended; if not, revert the rule and investigate the caller and source IP."

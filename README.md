@@ -1,6 +1,6 @@
 # Azure Sentinel Detection Engineering
 
-Detection engineering on a live Microsoft Sentinel and Defender XDR environment I operate. Eight custom analytics rules span three planes, each mapped to MITRE ATT&CK and proven end to end: a controlled action triggers the rule, the rule raises an incident, and the incident gets investigated and documented. Six watch the Azure **control plane** (`AzureActivity`), including a multi-stage correlation; one watches the **endpoint** (Defender for Endpoint), with Defender Vulnerability Management feeding a hunting library; one watches **identity** (Entra ID `SigninLogs`). All deployed by the same PR-gated pipeline.
+Detection engineering on a live Microsoft Sentinel and Defender XDR environment I operate. Nine custom analytics rules span three planes, each mapped to MITRE ATT&CK and proven end to end: a controlled action triggers the rule, the rule raises an incident, and the incident gets investigated and documented. Seven watch the Azure **control plane** (`AzureActivity`), including a multi-stage correlation and an ARG-backed content rule; one watches the **endpoint** (Defender for Endpoint), with Defender Vulnerability Management feeding a hunting library; one watches **identity** (Entra ID `SigninLogs`). All deployed by the same PR-gated pipeline.
 
 ![Telemetry, rules, incidents, and the CI/CD pipeline](screenshots/demo.gif)
 
@@ -41,7 +41,7 @@ flowchart LR
   A --> W[Log Analytics workspace<br/>sc200-ws]
   B --> W
   C --> W
-  W --> R[8 scheduled<br/>analytics rules]
+  W --> R[9 scheduled<br/>analytics rules]
   R --> I[Incidents]
   I --> V[Investigation<br/>+ MITRE mapping]
 ```
@@ -60,6 +60,7 @@ flowchart LR
 | [DET-006](detections/DET-006-lsass-credential-access.md) | LSASS credential access (endpoint) | **High** | Credential Access | [T1003.001](https://attack.mitre.org/techniques/T1003/001/) LSASS Memory |
 | [DET-007](detections/DET-007-rbac-grant-then-deploy.md) | Privilege grant followed by deployment (correlation) | **High** | Privilege Escalation / Persistence | [T1098](https://attack.mitre.org/techniques/T1098/) Account Manipulation |
 | [DET-008](detections/DET-008-signin-success-after-failures.md) | Successful sign-in after repeated failures (identity) | Medium | Credential Access / Initial Access | [T1110](https://attack.mitre.org/techniques/T1110/) Brute Force, [T1078](https://attack.mitre.org/techniques/T1078/) Valid Accounts |
+| [DET-009](detections/DET-009-nsg-opened-inbound-any.md) | NSG rule change exposed inbound from Any (ARG content) | **High** | Defense Evasion | [T1562.007](https://attack.mitre.org/techniques/T1562/007/) Disable/Modify Cloud Firewall |
 
 ![Detection rules overview](screenshots/02-detection-rules-overview.png)
 
@@ -81,7 +82,7 @@ A coverage map with explicit gaps is more honest than a list of rules. The [ATT&
 | Covered (deployed rule) | Known gap, tracked as an issue |
 |-------------------------|---------------------------------|
 | T1087 Account Discovery (DET-001) | [T1530 Data from Cloud Storage](../../issues/12), data-plane detection |
-| T1562.007 Disable/Modify Cloud Firewall (DET-002) | [T1496 Resource Hijacking](../../issues/13), spend/mining anomaly |
+| T1562.007 Disable/Modify Cloud Firewall (DET-002 / DET-009) | [T1496 Resource Hijacking](../../issues/13), spend/mining anomaly |
 | T1098 Account Manipulation (DET-003 / DET-005 / DET-007) | [T1526 Cloud Service Discovery](../../issues/14), strengthen heuristic |
 | T1485 Data Destruction (DET-004) | |
 | T1003.001 LSASS Memory (DET-006) | |
