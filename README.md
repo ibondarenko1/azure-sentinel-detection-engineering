@@ -94,6 +94,8 @@ A coverage map with explicit gaps is more honest than a list of rules. The [ATT&
 
 The gaps are not static text. Each one is a live [`detection-gap` issue](../../issues?q=is%3Aissue+label%3Adetection-gap), so the roadmap is a clickable backlog.
 
+**Why these rules and not others:** [docs/08, detection strategy and threat model](docs/08-detection-strategy.md) maps the catalog to a cloud kill chain and risk-ranks the gaps. **How a rule gets tuned:** [docs/09, a measured DET-005 tuning loop](docs/09-tuning-case-study.md) takes a rule from "fires on every write" to a measured zero false positives on the validation harness.
+
 ## Automated response (SOAR)
 
 The highest-severity detection closes the loop from detect to respond. A Sentinel automation rule runs a [Logic App playbook](playbooks/mass-deletion-response) on every DET-004 (mass deletion) incident: it posts an enrichment comment with the recommended containment (disable the caller, lock the resource groups, restore, hunt). The playbook authenticates with its own **managed identity** straight to the ARM API, with no secrets and no external connector.
@@ -123,7 +125,7 @@ investigations/   end-to-end incident write-ups
 simulations/      exact atomic-aligned trigger steps
 navigator/        ATT&CK coverage layer (covered + gaps)
 playbooks/        SOAR response (Logic App + automation rule)
-docs/             architecture, methodology, cicd, validation, data-dictionary, endpoint+TVM
+docs/             architecture, methodology, cicd, validation, data-dictionary, endpoint+TVM, detection-strategy, tuning case study
 screenshots/      visual evidence
 ```
 

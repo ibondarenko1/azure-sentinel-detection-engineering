@@ -63,6 +63,10 @@ This detection's alerts appear in the consolidated [alert queue](../screenshots/
 
 ## Tuning notes
 
+This rule is the worked example in [docs/09, tuning case study](../docs/09-tuning-case-study.md): v1
+fired on any successful write; v2 (this version) enforces the non-owner intent and measures 0 false
+positives on the [validation harness](../validation/RESULTS.md).
+
 - Maintain `soc-deploy-owners` as the source of fidelity; a legitimate deployer missing from it is
   the expected false positive, add them to the watchlist rather than loosening the rule.
 - Triage by provider: weight `Microsoft.Compute` over `Microsoft.Storage`.
