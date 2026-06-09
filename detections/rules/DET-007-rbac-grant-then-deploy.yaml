@@ -1,0 +1,61 @@
+id: 7a1d2c3e-4b5f-46a7-8c9d-0e1f2a3b4c5d
+name: "[DET] Privilege grant followed by deployment (same principal)"
+description: |
+  A multi-stage correlation: the same principal creates an RBAC role assignment and then deploys
+  a resource (Compute / Storage / Web) within a short window. Either step alone is a single-stage
+  signal (DET-003, DET-005); seeing a principal grant access and immediately use it is the
+  escalation-then-action pattern an atomic rule misses. Deterministic correlation, not a threshold.
+severity: High
+requiredDataConnectors:
+  - connectorId: AzureActivity
+    dataTypes:
+      - AzureActivity
+queryFrequency: PT30M
+queryPeriod: PT2H
+triggerOperator: gt
+triggerThreshold: 0
+tactics:
+  - PrivilegeEscalation
+  - Persistence
+relevantTechniques:
+  - T1098
+query: |
+  let corrWindow = 30m;
+  let grants =
+      AzureActivity
+      | where TimeGenerated > ago(2h)
+      | where OperationNameValue has "Microsoft.Authorization/roleAssignments/write"
+      | where ActivityStatusValue == "Success"
+      | extend GrantIp = tostring(parse_json(tostring(Properties_d.httpRequest)).clientIpAddress)
+      | project GrantTime = TimeGenerated, Caller, GrantIp;
+  let deploys =
+      AzureActivity
+      | where TimeGenerated > ago(2h)
+      | where OperationNameValue endswith "/write"
+      | where ActivityStatusValue == "Success"
+      | where ResourceProviderValue in~ ("Microsoft.Compute", "Microsoft.Storage", "Microsoft.Web")
+      | project DeployTime = TimeGenerated, Caller, DeployOp = OperationNameValue, ResourceId;
+  grants
+  | join kind=inner deploys on Caller
+  | where DeployTime between (GrantTime .. (GrantTime + corrWindow))
+  | summarize GrantTime = min(GrantTime), FirstDeploy = min(DeployTime),
+              DeployedResources = make_set(ResourceId, 20), DeployCount = dcount(ResourceId)
+      by Caller, GrantIp
+entityMappings:
+  - entityType: Account
+    fieldMappings:
+      - identifier: FullName
+        columnName: Caller
+  - entityType: IP
+    fieldMappings:
+      - identifier: Address
+        columnName: GrantIp
+metadata:
+  atomic: "T1098 chain, Account Manipulation then resource creation (privilege escalation immediately used)."
+  requiredFields: [AzureActivity.OperationNameValue, AzureActivity.ActivityStatusValue, AzureActivity.Caller, AzureActivity.ResourceProviderValue, AzureActivity.Properties_d]
+  dataPlane: "AzureActivity control plane; self-join correlating roleAssignments/write to a watched-provider write by the same Caller within 30 minutes."
+  falsePositives:
+    - "An admin who legitimately grants a role and then deploys in the same session (triage the role and the resource)."
+    - "Automation that assigns a role and immediately provisions; allow-list the principal in soc-automation-principals once confirmed, and DET-003 / DET-005 already exclude it."
+  severityRationale: "High. Escalation followed by immediate action is higher signal than either alone; the correlation reduces the per-stage false positives."
+  responseAction: "Treat as a likely escalation chain: confirm the role granted and the deployed resource, disable the principal if unauthorized, and remove both the assignment and the resource."

@@ -1,0 +1,15 @@
+{
+  "_comment": "DET-007 correlation: fires when the SAME caller does a roleAssignments/write then a watched-provider write within 30m. Silent when only one step occurs, the two steps are by different callers, the deploy precedes the grant, or they are >30m apart.",
+  "fires": [
+    {"minutesAgo": 20, "ActivityStatusValue": "Success", "Caller": "esc@contoso.com", "OperationNameValue": "Microsoft.Authorization/roleAssignments/write", "ResourceProviderValue": "Microsoft.Authorization", "ResourceId": "/subscriptions/x/providers/Microsoft.Authorization/roleAssignments/aaaa", "Properties_d": {"httpRequest": "{\"clientIpAddress\":\"203.0.113.9\"}"}},
+    {"minutesAgo": 10, "ActivityStatusValue": "Success", "Caller": "esc@contoso.com", "OperationNameValue": "Microsoft.Compute/virtualMachines/write", "ResourceProviderValue": "Microsoft.Compute", "ResourceId": "/subscriptions/x/rg/a/providers/Microsoft.Compute/virtualMachines/vm-esc"}
+  ],
+  "silent": [
+    {"minutesAgo": 15, "ActivityStatusValue": "Success", "Caller": "onlygrant@contoso.com", "OperationNameValue": "Microsoft.Authorization/roleAssignments/write", "ResourceProviderValue": "Microsoft.Authorization", "ResourceId": "/subscriptions/x/providers/Microsoft.Authorization/roleAssignments/bbbb"},
+    {"minutesAgo": 15, "ActivityStatusValue": "Success", "Caller": "onlydeploy@contoso.com", "OperationNameValue": "Microsoft.Storage/storageAccounts/write", "ResourceProviderValue": "Microsoft.Storage", "ResourceId": "/subscriptions/x/rg/a/providers/Microsoft.Storage/storageAccounts/stg-od"},
+    {"minutesAgo": 120, "ActivityStatusValue": "Success", "Caller": "slow@contoso.com", "OperationNameValue": "Microsoft.Authorization/roleAssignments/write", "ResourceProviderValue": "Microsoft.Authorization", "ResourceId": "/subscriptions/x/providers/Microsoft.Authorization/roleAssignments/cccc"},
+    {"minutesAgo": 10, "ActivityStatusValue": "Success", "Caller": "slow@contoso.com", "OperationNameValue": "Microsoft.Compute/virtualMachines/write", "ResourceProviderValue": "Microsoft.Compute", "ResourceId": "/subscriptions/x/rg/a/providers/Microsoft.Compute/virtualMachines/vm-slow"},
+    {"minutesAgo": 60, "ActivityStatusValue": "Success", "Caller": "before@contoso.com", "OperationNameValue": "Microsoft.Compute/virtualMachines/write", "ResourceProviderValue": "Microsoft.Compute", "ResourceId": "/subscriptions/x/rg/a/providers/Microsoft.Compute/virtualMachines/vm-before"},
+    {"minutesAgo": 10, "ActivityStatusValue": "Success", "Caller": "before@contoso.com", "OperationNameValue": "Microsoft.Authorization/roleAssignments/write", "ResourceProviderValue": "Microsoft.Authorization", "ResourceId": "/subscriptions/x/providers/Microsoft.Authorization/roleAssignments/dddd"}
+  ]
+}

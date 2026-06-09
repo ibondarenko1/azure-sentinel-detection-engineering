@@ -56,3 +56,12 @@ DET-006:
   truePositivesObserved: 1          # incident #65 (controlled T1003.001 attempt, prevented)
   ruleIntervalMinutes: 15
   mttdMinutesObserved: 18
+
+DET-007:
+  name: Privilege grant followed by deployment (same principal)
+  dataPlane: "AzureActivity self-join (roleAssignments/write -> watched-provider write, same Caller, <=30m)"
+  expectedEventVolumePerDay: "~0 (the correlation is rare; either half alone does not fire)"
+  observedFalsePositiveRate: "not measurable at lab scale; in prod = share of these incidents closed-as-benign over 30d. Lower than either single-stage rule by construction (requires both steps)"
+  truePositivesObserved: 0          # authored + fixture-validated; live witness pending a simulated chain
+  ruleIntervalMinutes: 30
+  mttdMinutesObserved: null         # pending first live correlation
