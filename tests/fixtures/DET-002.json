@@ -1,10 +1,12 @@
 {
-  "_comment": "DET-002 NSG securityRules write/delete, Success.",
+  "_comment": "DET-002 v2: fires on a successful NSG securityRules write/delete by a non-automation caller; silent for an allow-listed IaC principal, a non-securityRules op, or a failure. watchlist = soc-nsg-change-principals SearchKey values (example principal, no real identity).",
+  "watchlist": ["nsg-iac@example.com"],
   "fires": [
     {"ActivityStatusValue": "Success", "Caller": "attacker@contoso.com", "OperationNameValue": "Microsoft.Network/networkSecurityGroups/securityRules/write", "ResourceProviderValue": "Microsoft.Network", "ResourceId": "/subscriptions/x/rg/a/providers/Microsoft.Network/networkSecurityGroups/nsg1/securityRules/open-rdp"}
   ],
   "silent": [
+    {"ActivityStatusValue": "Success", "Caller": "nsg-iac@example.com", "OperationNameValue": "Microsoft.Network/networkSecurityGroups/securityRules/write", "ResourceProviderValue": "Microsoft.Network", "ResourceId": "/subscriptions/x/rg/a/providers/Microsoft.Network/networkSecurityGroups/nsg1/securityRules/iac-rule"},
     {"ActivityStatusValue": "Success", "Caller": "ops@contoso.com", "OperationNameValue": "Microsoft.Network/virtualNetworks/write", "ResourceProviderValue": "Microsoft.Network", "ResourceId": "/subscriptions/x/rg/a/providers/Microsoft.Network/virtualNetworks/vnet1"},
-    {"ActivityStatusValue": "Failure", "Caller": "ops@contoso.com", "OperationNameValue": "Microsoft.Network/networkSecurityGroups/securityRules/write", "ResourceProviderValue": "Microsoft.Network", "ResourceId": "/subscriptions/x/rg/a/providers/Microsoft.Network/networkSecurityGroups/nsg1/securityRules/denied"}
+    {"ActivityStatusValue": "Failure", "Caller": "attacker@contoso.com", "OperationNameValue": "Microsoft.Network/networkSecurityGroups/securityRules/write", "ResourceProviderValue": "Microsoft.Network", "ResourceId": "/subscriptions/x/rg/a/providers/Microsoft.Network/networkSecurityGroups/nsg1/securityRules/denied"}
   ]
 }

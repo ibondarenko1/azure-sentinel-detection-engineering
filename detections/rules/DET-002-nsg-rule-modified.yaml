@@ -1,8 +1,14 @@
 id: 41c9799f-00e7-47b8-a2a5-e4f4ee0b4ab4
 name: "[DET] Network Security Group rule modified"
 description: |
-  An NSG security rule was created, modified, or deleted. Loosening an NSG (e.g. opening
-  a management port to the internet) is a classic move to weaken network defenses.
+  An NSG security rule was created, modified, or deleted by a principal that is not a known
+  network change-management / IaC identity. Loosening an NSG (opening a management port to the
+  internet) weakens network defenses; v2 suppresses routine IaC changes (soc-nsg-change-principals
+  watchlist) and surfaces NSG changes by unexpected principals.
+  DATA LIMITATION: AzureActivity does NOT carry the NSG rule body (access / direction /
+  sourceAddressPrefix) for a securityRules write (verified against the live record), so this rule
+  cannot determine whether the change opened inbound Allow from Any. Detecting that content-level
+  condition requires the NSG rule config (Azure Resource Graph or NSG diagnostics), see the card.
 severity: Medium
 requiredDataConnectors:
   - connectorId: AzureActivity
@@ -17,20 +23,32 @@ tactics:
 relevantTechniques:
   - T1562
 query: |
+  // soc-nsg-change-principals: SearchKey = objectId of IaC/change-management identities whose
+  // NSG securityRules changes are routine. Maintained in the tenant; no identities in the repo.
+  let nsgAutomation = _GetWatchlist('soc-nsg-change-principals') | project SearchKey;
   AzureActivity
   | where TimeGenerated > ago(1h)
   | where OperationNameValue has "Microsoft.Network/networkSecurityGroups/securityRules"
   | where ActivityStatusValue == "Success"
-  | project TimeGenerated, Caller, OperationNameValue, ResourceId
+  | where Caller !in~ (nsgAutomation)
+  | extend CallerIp = tostring(parse_json(tostring(Properties_d.httpRequest)).clientIpAddress)
+  | extend Action = tostring(split(OperationNameValue, "/")[-1])
+  | project TimeGenerated, Caller, CallerIp, Action, OperationNameValue, ResourceId
 entityMappings:
   - entityType: Account
     fieldMappings:
       - identifier: FullName
         columnName: Caller
+  - entityType: IP
+    fieldMappings:
+      - identifier: Address
+        columnName: CallerIp
 metadata:
   atomic: "T1562.007, Impair Defenses: Disable or Modify Cloud Firewall (NSG rule modification)."
-  requiredFields: [AzureActivity.OperationNameValue, AzureActivity.ActivityStatusValue, AzureActivity.Caller, AzureActivity.ResourceId]
+  requiredFields: [AzureActivity.OperationNameValue, AzureActivity.ActivityStatusValue, AzureActivity.Caller, AzureActivity.ResourceId, AzureActivity.Properties_d]
+  dataPlane: "AzureActivity control plane; IaC allow-list via the soc-nsg-change-principals watchlist."
+  contentLimitation: "The NSG rule's access/direction/source is not in AzureActivity. To alert specifically on 'opens inbound Allow from Any', join the NSG rule config from Azure Resource Graph (resourcechanges) or NSG flow/diagnostic logs; tracked as a follow-up data-onboarding item."
   falsePositives:
-    - "Legitimate network change management; IaC applying NSG updates."
-  severityRationale: "Any NSG change is review-worthy but not itself harmful, Medium. Escalate to High when the new rule allows a management port (22/3389/5985) from Any/Internet."
-  responseAction: "Confirm the change is authorized; if the rule opens a management port to the internet, revert and investigate the caller."
+    - "An IaC/change-management principal missing from soc-nsg-change-principals; add it to the watchlist."
+  severityRationale: "Any NSG change by a non-automation principal is review-worthy but not itself harmful, Medium. Escalate to High when triage shows the new rule allows a management port (22/3389/5985) from Any/Internet."
+  responseAction: "Confirm the change is authorized; inspect the rule (access/direction/source) in the portal or Resource Graph; if it opens a management port to the internet, revert and investigate the caller."

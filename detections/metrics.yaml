@@ -14,7 +14,7 @@ DET-001:
 DET-002:
   name: Network Security Group rule modified
   expectedEventVolumePerDay: "0-2 (NSG changes are infrequent in a small env)"
-  observedFalsePositiveRate: "n/a in this environment (no legitimate NSG change occurred)"
+  observedFalsePositiveRate: "not measurable at lab scale; in prod = share of these incidents closed-as-benign over 30d, driven down by the soc-nsg-change-principals allow-list"
   truePositivesObserved: 1          # incident #5
   ruleIntervalMinutes: 30
   mttdMinutesObserved: 33
@@ -22,7 +22,7 @@ DET-002:
 DET-003:
   name: RBAC role assignment changes
   expectedEventVolumePerDay: "0-3 (onboarding / PIM activity)"
-  observedFalsePositiveRate: "n/a in this environment"
+  observedFalsePositiveRate: "not measurable at lab scale; in prod = share of these incidents closed-as-benign over 30d, driven down by the soc-automation-principals allow-list"
   truePositivesObserved: 1          # incident #2
   ruleIntervalMinutes: 30
   mttdMinutesObserved: 33
