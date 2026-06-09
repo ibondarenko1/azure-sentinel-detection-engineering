@@ -31,18 +31,17 @@ query: |
       | summarize Failures = count(), FailIPs = make_set(IPAddress, 10), FirstFail = min(TimeGenerated)
           by UserPrincipalName
       | where Failures >= failThreshold;
-  let successes =
-      SigninLogs
-      | where TimeGenerated > ago(lookback)
-      | where ResultType == "0"
-      | project SuccessTime = TimeGenerated, UserPrincipalName, SuccessIP = IPAddress, AppDisplayName;
-  failures
-  | join kind=inner successes on UserPrincipalName
+  SigninLogs
+  | where TimeGenerated > ago(lookback)
+  | where ResultType == "0"
+  | project SuccessTime = TimeGenerated, UserPrincipalName, SuccessIP = IPAddress, App = AppDisplayName
+  | join kind=inner failures on UserPrincipalName
   | where SuccessTime > FirstFail
-  | summarize Failures = max(Failures), FailIPs = take_any(FailIPs), FirstFail = min(FirstFail),
-              SuccessTime = min(SuccessTime), SuccessIP = take_any(SuccessIP), App = take_any(AppDisplayName)
-      by UserPrincipalName
-  | extend NewSourceIp = SuccessIP !in (FailIPs)
+  | extend SuccessFromNewIp = array_index_of(FailIPs, SuccessIP) < 0
+  | summarize SuccessTime = min(SuccessTime), Failures = max(Failures),
+              NewIpSuccesses = countif(SuccessFromNewIp), SuccessIP = min(SuccessIP), App = min(App)
+      by UserPrincipalName, FirstFail
+  | extend NewSourceIp = NewIpSuccesses > 0
 entityMappings:
   - entityType: Account
     fieldMappings:
