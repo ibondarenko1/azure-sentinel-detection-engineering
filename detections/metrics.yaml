@@ -65,3 +65,12 @@ DET-007:
   truePositivesObserved: 0          # authored + fixture-validated; live witness pending a simulated chain
   ruleIntervalMinutes: 30
   mttdMinutesObserved: null         # pending first live correlation
+
+DET-008:
+  name: Successful sign-in after repeated failures
+  dataPlane: "Entra ID SigninLogs (via entra-id-logs-to-sc200-ws diagnostic export)"
+  expectedEventVolumePerDay: "low; depends on real failed-then-successful sign-in bursts"
+  observedFalsePositiveRate: "not measurable yet (SigninLogs began flowing this session); in prod = share closed-as-benign over 30d, cut hard by escalating only on NewSourceIp"
+  truePositivesObserved: 0          # authored + fixture-validated; live witness pending sign-in data
+  ruleIntervalMinutes: 15
+  mttdMinutesObserved: null         # pending first live sign-in burst

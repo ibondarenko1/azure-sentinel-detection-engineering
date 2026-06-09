@@ -1,0 +1,61 @@
+id: 8b2e3d4f-5c6a-47b8-9d0e-1f2a3b4c5d6e
+name: "[DET] Successful sign-in after repeated failures"
+description: |
+  A user account had a burst of failed sign-ins followed by a successful one in the same window,
+  the classic brute-force / password-spray success or a compromised credential finally accepted.
+  Adds the identity plane to the control-plane and endpoint detections: it reads Entra ID SigninLogs
+  (streamed to sc200-ws via the Entra diagnostic export), correlating failures to a later success per
+  user. Escalate when the successful sign-in IP/geo differs from the failures.
+severity: Medium
+requiredDataConnectors:
+  - connectorId: AzureActiveDirectory
+    dataTypes:
+      - SigninLogs
+queryFrequency: PT15M
+queryPeriod: PT1H
+tactics:
+  - CredentialAccess
+  - InitialAccess
+relevantTechniques:
+  - T1110
+  - T1078
+triggerOperator: gt
+triggerThreshold: 0
+query: |
+  let failThreshold = 5;
+  let lookback = 1h;
+  let failures =
+      SigninLogs
+      | where TimeGenerated > ago(lookback)
+      | where ResultType != "0"
+      | summarize Failures = count(), FailIPs = make_set(IPAddress, 10), FirstFail = min(TimeGenerated)
+          by UserPrincipalName
+      | where Failures >= failThreshold;
+  SigninLogs
+  | where TimeGenerated > ago(lookback)
+  | where ResultType == "0"
+  | project SuccessTime = TimeGenerated, UserPrincipalName, SuccessIP = IPAddress, App = AppDisplayName
+  | join kind=inner failures on UserPrincipalName
+  | where SuccessTime > FirstFail
+  | extend SuccessFromNewIp = array_index_of(FailIPs, SuccessIP) < 0
+  | summarize SuccessTime = min(SuccessTime), Failures = max(Failures),
+              NewIpSuccesses = countif(SuccessFromNewIp), SuccessIP = min(SuccessIP), App = min(App)
+      by UserPrincipalName, FirstFail
+  | extend NewSourceIp = NewIpSuccesses > 0
+entityMappings:
+  - entityType: Account
+    fieldMappings:
+      - identifier: FullName
+        columnName: UserPrincipalName
+  - entityType: IP
+    fieldMappings:
+      - identifier: Address
+        columnName: SuccessIP
+metadata:
+  atomic: "T1110 Brute Force then T1078 Valid Accounts (a brute-forced/sprayed credential that finally succeeds)."
+  requiredFields: [SigninLogs.ResultType, SigninLogs.UserPrincipalName, SigninLogs.IPAddress, SigninLogs.TimeGenerated]
+  dataPlane: "Entra ID SigninLogs, streamed to sc200-ws by the entra-id-logs-to-sc200-ws diagnostic export."
+  falsePositives:
+    - "A user who mistyped their password several times then signed in successfully (very common); the NewSourceIp flag and the failure count help separate fat-finger from attack."
+  severityRationale: "Medium baseline. Escalate to High when NewSourceIp is true (success from an IP not seen in the failures) or the failure count is large, both point to a successful credential attack rather than a typo."
+  responseAction: "Confirm with the user; if unrecognised, revoke sessions and reset the credential, then review what the session did after the successful sign-in."

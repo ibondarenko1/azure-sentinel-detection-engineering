@@ -1,0 +1,25 @@
+{
+  "_comment": "DET-008 (SigninLogs): fires when a user has >=5 failed sign-ins (ResultType != 0) then a success (ResultType 0) after the first failure. Silent for a lone success, fewer than 5 failures, or failures with no later success.",
+  "table": "SigninLogs",
+  "fires": [
+    {"minutesAgo": 30, "UserPrincipalName": "victim@contoso.com", "ResultType": "50126", "ResultDescription": "Invalid username or password", "IPAddress": "198.51.100.7", "AppDisplayName": "Azure Portal"},
+    {"minutesAgo": 28, "UserPrincipalName": "victim@contoso.com", "ResultType": "50126", "ResultDescription": "Invalid username or password", "IPAddress": "198.51.100.7", "AppDisplayName": "Azure Portal"},
+    {"minutesAgo": 26, "UserPrincipalName": "victim@contoso.com", "ResultType": "50126", "ResultDescription": "Invalid username or password", "IPAddress": "198.51.100.7", "AppDisplayName": "Azure Portal"},
+    {"minutesAgo": 24, "UserPrincipalName": "victim@contoso.com", "ResultType": "50126", "ResultDescription": "Invalid username or password", "IPAddress": "198.51.100.7", "AppDisplayName": "Azure Portal"},
+    {"minutesAgo": 22, "UserPrincipalName": "victim@contoso.com", "ResultType": "50126", "ResultDescription": "Invalid username or password", "IPAddress": "198.51.100.7", "AppDisplayName": "Azure Portal"},
+    {"minutesAgo": 10, "UserPrincipalName": "victim@contoso.com", "ResultType": "0", "ResultDescription": "Success", "IPAddress": "198.51.100.7", "AppDisplayName": "Azure Portal"}
+  ],
+  "silent": [
+    {"minutesAgo": 10, "UserPrincipalName": "ok@contoso.com", "ResultType": "0", "ResultDescription": "Success", "IPAddress": "203.0.113.5", "AppDisplayName": "Azure Portal"},
+    {"minutesAgo": 40, "UserPrincipalName": "fewfails@contoso.com", "ResultType": "50126", "ResultDescription": "Invalid username or password", "IPAddress": "203.0.113.6", "AppDisplayName": "Office 365"},
+    {"minutesAgo": 38, "UserPrincipalName": "fewfails@contoso.com", "ResultType": "50126", "ResultDescription": "Invalid username or password", "IPAddress": "203.0.113.6", "AppDisplayName": "Office 365"},
+    {"minutesAgo": 36, "UserPrincipalName": "fewfails@contoso.com", "ResultType": "50126", "ResultDescription": "Invalid username or password", "IPAddress": "203.0.113.6", "AppDisplayName": "Office 365"},
+    {"minutesAgo": 12, "UserPrincipalName": "fewfails@contoso.com", "ResultType": "0", "ResultDescription": "Success", "IPAddress": "203.0.113.6", "AppDisplayName": "Office 365"},
+    {"minutesAgo": 50, "UserPrincipalName": "onlyfails@contoso.com", "ResultType": "50053", "ResultDescription": "Account locked", "IPAddress": "203.0.113.9", "AppDisplayName": "Azure Portal"},
+    {"minutesAgo": 48, "UserPrincipalName": "onlyfails@contoso.com", "ResultType": "50053", "ResultDescription": "Account locked", "IPAddress": "203.0.113.9", "AppDisplayName": "Azure Portal"},
+    {"minutesAgo": 46, "UserPrincipalName": "onlyfails@contoso.com", "ResultType": "50053", "ResultDescription": "Account locked", "IPAddress": "203.0.113.9", "AppDisplayName": "Azure Portal"},
+    {"minutesAgo": 44, "UserPrincipalName": "onlyfails@contoso.com", "ResultType": "50053", "ResultDescription": "Account locked", "IPAddress": "203.0.113.9", "AppDisplayName": "Azure Portal"},
+    {"minutesAgo": 42, "UserPrincipalName": "onlyfails@contoso.com", "ResultType": "50053", "ResultDescription": "Account locked", "IPAddress": "203.0.113.9", "AppDisplayName": "Azure Portal"},
+    {"minutesAgo": 40, "UserPrincipalName": "onlyfails@contoso.com", "ResultType": "50053", "ResultDescription": "Account locked", "IPAddress": "203.0.113.9", "AppDisplayName": "Azure Portal"}
+  ]
+}
