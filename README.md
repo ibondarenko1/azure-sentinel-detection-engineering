@@ -112,7 +112,7 @@ The detections start on the Azure control plane; this phase adds the endpoint pl
 
 ![Device inventory, soc-sensor-01 Active](screenshots/08-device-active.png)
 
-![TVM weaknesses, OpenSSL critical CVEs](screenshots/07-tvm-weaknesses.png)
+![Defender Vulnerability Management weaknesses, current volume (150 in org, 13 critical)](screenshots/15-tvm-weaknesses-current.png)
 
 ## Posture remediation
 

@@ -11,9 +11,9 @@ Visual evidence for these detections. Full unredacted captures are staged in `_r
 | `05-incidents-queue-populated.png` | Incidents queue, endpoint incident on `soc-sensor-01` (Antivirus / Defender for Endpoint) |
 | `06-inc-03-overview.png` | RBAC role assignment alert detail |
 | `06-inc-04-overview.png` | Mass resource deletion (High) alert detail, caller + delete counts 8/5 over threshold |
-| `07-tvm-weaknesses.png` | Defender Vulnerability Management, OpenSSL critical CVEs (CVSS 9.8), 3 critical / 19 in org |
+| `07-tvm-weaknesses.png` | Earlier TVM weaknesses view (OpenSSL criticals, 3 critical / 19 in org); superseded in the docs by the current `15` |
 | `08-device-active.png` | Device inventory, `soc-sensor-01` Active and Onboarded (Windows 11 sensor) |
-| `09-secure-score.png` | Microsoft 365 Secure Score (61.76%, identity/apps/data/device), referenced by [docs/10](../docs/10-posture-remediation.md) |
+| `09-secure-score.png` | Earlier Microsoft 365 Secure Score (61.76%, 32 actions); superseded in the docs by the current `12` |
 | `10-inc-06-lsass.png` | Sentinel incident #65 `[DET] LSASS credential access` (High), host `soc-sensor-01`, tactic Credential Access |
 | `11-sentinel-overview.png` | Microsoft Sentinel overview (current): 10 analytics rules enabled, 4 active data connectors, 1 automation rule, live data received |
 | `12-secure-score-current.png` | Microsoft 365 Secure Score current state, 50.14%, 94 actions to review |
