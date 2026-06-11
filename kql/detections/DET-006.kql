@@ -1,7 +1,7 @@
 // DET-006, LSASS credential access
 // MITRE: CredentialAccess / T1003.001
 // Source: DeviceEvents, DeviceProcessEvents, SecurityAlert | Frequency: every 15 min | Lookback: 1h
-// Generated from detections/rules/DET-006-lsass-credential-access.yaml by cicd/sync-kql-mirror.py — do not edit by hand.
+// Generated from detections/rules/DET-006-lsass-credential-access.yaml by cicd/sync-kql-mirror.py, do not edit by hand.
 let lookback = 1h;
 let knownGoodReaders = dynamic(["MsMpEng.exe", "MsSense.exe", "SenseIR.exe"]);
 // Signal A - direct handle open to LSASS (api-level: Mimikatz / direct-syscall tooling)

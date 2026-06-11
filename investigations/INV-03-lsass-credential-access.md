@@ -42,7 +42,7 @@ The host is hardened: **LSASS RunAsPPL (`RunAsPPL = 2`)**, **AMSI**, and **Defen
 Pivot in Defender advanced hunting to bound the activity with the companion hunt:
 
 ```kql
-// kql/hunting/endpoint-lsass-access.kql — every LSASS credential-theft signal MDE emits
+// kql/hunting/endpoint-lsass-access.kql, every LSASS credential-theft signal MDE emits
 let knownGoodReaders = dynamic(["MsMpEng.exe", "MsSense.exe", "SenseIR.exe"]);
 let openHandle =
     DeviceEvents

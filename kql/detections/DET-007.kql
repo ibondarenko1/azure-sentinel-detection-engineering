@@ -1,7 +1,7 @@
 // DET-007, Privilege grant followed by deployment (same principal)
 // MITRE: PrivilegeEscalation / Persistence / T1098
 // Source: AzureActivity | Frequency: every 30 min | Lookback: 2h
-// Generated from detections/rules/DET-007-rbac-grant-then-deploy.yaml by cicd/sync-kql-mirror.py — do not edit by hand.
+// Generated from detections/rules/DET-007-rbac-grant-then-deploy.yaml by cicd/sync-kql-mirror.py, do not edit by hand.
 let corrWindow = 30m;
 let grants =
     AzureActivity

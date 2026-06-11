@@ -14,13 +14,13 @@ techniques these rules detect.
 
 ## What it does
 
-- `benign.sh`  — legitimate actions that map to each rule's **silent** case (allow-listed owner
+- `benign.sh`: legitimate actions that map to each rule's **silent** case (allow-listed owner
   deploy, sub-threshold failures, sub-threshold deletes, a deploy with no preceding grant).
-- `attacks.sh` — the malicious variants that map to each rule's **fire** case (mass delete, role
+- `attacks.sh`: the malicious variants that map to each rule's **fire** case (mass delete, role
   grant, grant-then-deploy chain, NSG opened inbound from Any).
-- `measure.py` — runs each deployed rule's real KQL against the workspace over the run window and
+- `measure.py`: runs each deployed rule's real KQL against the workspace over the run window and
   reports fired / silent, then writes `RESULTS.md`.
-- `cleanup.sh` — removes everything the harness created (tracked in `.harness-state`), idempotent.
+- `cleanup.sh`: removes everything the harness created (tracked in `.harness-state`), idempotent.
 
 All resources live in `sc200-lab`, are prefixed `val-`, and are torn down by `cleanup.sh`.
 

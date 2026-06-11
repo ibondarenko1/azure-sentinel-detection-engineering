@@ -10,7 +10,7 @@ Exact, benign actions to fire each detection. Every action is performed against 
 
 Generate ~10+ authorization failures from one caller within an hour.
 
-**Portal:** sign in as a low-privilege / second account and repeatedly attempt an action you lack rights for (e.g. open a Key Vault you can't read, or try to delete a resource you don't own). Repeat ~10–12 times.
+**Portal:** sign in as a low-privilege / second account and repeatedly attempt an action you lack rights for (e.g. open a Key Vault you can't read, or try to delete a resource you don't own). Repeat ~10 to 12 times.
 
 **CLI alternative:**
 ```bash

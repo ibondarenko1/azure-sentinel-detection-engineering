@@ -33,7 +33,7 @@ AzureActivity
 > **Data limitation (honest boundary).** AzureActivity records *that* an NSG rule changed, not the
 > rule's content: the `securityRules` write record carries no `access` / `direction` /
 > `sourceAddressPrefix` (verified against the live `Properties_d`). So this rule **cannot** decide
-> whether the change opened *inbound Allow from Any* — only that an NSG rule was changed by a
+> whether the change opened *inbound Allow from Any*, only that an NSG rule was changed by a
 > non-allow-listed principal. Detecting the content-level condition needs the NSG rule config from
 > **Azure Resource Graph** (`resourcechanges`) or NSG diagnostics; that is tracked as a follow-up
 > data-onboarding item (`metadata.contentLimitation`), not faked from data that does not carry it.

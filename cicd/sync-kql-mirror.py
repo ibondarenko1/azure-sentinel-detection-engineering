@@ -51,7 +51,7 @@ def render(path):
         f"// MITRE: {tactics} / {techs}\n"
         f"// Source: {sources} | Frequency: {human_freq(r.get('queryFrequency'))} "
         f"| Lookback: {human_period(r.get('queryPeriod'))}\n"
-        f"// Generated from detections/rules/{os.path.basename(path)} by cicd/sync-kql-mirror.py — do not edit by hand.\n"
+        f"// Generated from detections/rules/{os.path.basename(path)} by cicd/sync-kql-mirror.py, do not edit by hand.\n"
     )
     return base, header + r["query"].rstrip() + "\n"
 

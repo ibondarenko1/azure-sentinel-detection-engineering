@@ -23,9 +23,9 @@ attack. DET-006 fuses the three signals Defender for Endpoint actually produces 
 so it fires whether the dump runs, is denied at the API layer, or is prevented by AMSI / behavioral
 protection:
 
-- **Signal A — api-level:** a process opens a handle to `lsass.exe` (`DeviceEvents.OpenProcessApiCall`).
-- **Signal B — process-level:** a known dump tool runs with `lsass` on its command line (`DeviceProcessEvents`).
-- **Signal C — alert-level:** Defender prevents an LSASS credential-theft hacktool (`SecurityAlert`, provider MDATP).
+- **Signal A, api-level:** a process opens a handle to `lsass.exe` (`DeviceEvents.OpenProcessApiCall`).
+- **Signal B, process-level:** a known dump tool runs with `lsass` on its command line (`DeviceProcessEvents`).
+- **Signal C, alert-level:** Defender prevents an LSASS credential-theft hacktool (`SecurityAlert`, provider MDATP).
 
 ## Detection logic
 
