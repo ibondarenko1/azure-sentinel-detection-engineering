@@ -16,16 +16,25 @@ baseline -> prioritize -> remediate -> measure (re-score) -> track the rest
 There are two Secure Scores in this tenant and they measure different planes. Conflating them is the
 usual mistake.
 
-| Score | Plane | Value at baseline | Source |
-|-------|-------|-------------------|--------|
-| Microsoft 365 Secure Score | identity, apps, data, device | **61.76%**, 32 actions to review | Defender portal ([screenshot](../screenshots/09-secure-score.png)) |
+| Score | Plane | Current value | Source |
+|-------|-------|---------------|--------|
+| Microsoft 365 Secure Score | identity, apps, data, device | **50.14%**, 94 actions to review | Defender portal ([screenshot](../screenshots/12-secure-score-current.png)) |
 | Defender for Cloud Secure Score | Azure resource posture | **68.81%** (21.33 / 31) | ARM `Microsoft.Security`, pulled by [collect-posture.ps1](../posture/collect-posture.ps1) |
+| Exposure score | device / vulnerability exposure | **65 / 100**, Medium, trending | Exposure Management ([screenshot](../screenshots/14-exposure-recommendations.png)) |
 
 The Defender for Cloud score is the one driven here because it is the Azure-resource plane these
 detections live on, and it is pullable as a [machine-readable snapshot](../posture/snapshots) so the
-before/after is a file diff, not a screenshot comparison. The M365 score is captured from the portal
-because the Graph `security/secureScores` endpoint needs a consented app the az CLI token does not
-carry; that limitation is recorded rather than hidden.
+before/after is a file diff, not a screenshot comparison. The M365 score and the exposure score are
+captured from the portal because their APIs (Graph `security/secureScores`, exposure management) need
+a consented app the az CLI token does not carry; that limitation is recorded rather than hidden. The
+M365 actions-to-review climbed from 32 to 94 as the tenant accumulated data, which is what dropped the
+percentage even though nothing regressed: more applicable controls means a larger denominator.
+
+![Microsoft 365 Secure Score, current state](../screenshots/12-secure-score-current.png)
+
+![Exposure Management score, trend, and recommendations](../screenshots/14-exposure-recommendations.png)
+
+![Defender Vulnerability Management weaknesses, current volume](../screenshots/15-tvm-weaknesses-current.png)
 
 ## Baseline (before)
 

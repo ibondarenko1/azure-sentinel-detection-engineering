@@ -16,6 +16,10 @@ Visual evidence for these detections. Full unredacted captures are staged in `_r
 | `09-secure-score.png` | Microsoft 365 Secure Score (61.76%, identity/apps/data/device), referenced by [docs/10](../docs/10-posture-remediation.md) |
 | `10-inc-06-lsass.png` | Sentinel incident #65 `[DET] LSASS credential access` (High), host `soc-sensor-01`, tactic Credential Access |
 | `11-sentinel-overview.png` | Microsoft Sentinel overview, incident queue + analytics-rule state |
+| `12-secure-score-current.png` | Microsoft 365 Secure Score current state, 50.14%, 94 actions to review |
+| `13-defender-overview.png` | Defender portal dashboard, current scope: SOC optimization, UEBA, automation, connectors, secure score, devices |
+| `14-exposure-recommendations.png` | Exposure Management, exposure score 65 (Medium) + 6-day score-history trend + recommendation list |
+| `15-tvm-weaknesses-current.png` | Defender Vulnerability Management weaknesses, 150 in org / 13 critical / 1 exploitable (current volume) |
 
 ## Redaction
 
@@ -32,9 +36,10 @@ Still review before publishing:
 
 Per-rule logic shots (`03-rule-0N`), per-incident shots for DET-001/02/05 (`06-inc-01/02/05`), attack-story/timeline (`07`, `08`), and the investigation pivot (`09`) were not captured, the consolidated alert queue (`05`) and the two detail shots cover the story. Add them later if desired.
 
-For the posture-remediation phase ([docs/10](../docs/10-posture-remediation.md)), the Defender for
-Cloud Secure Score and its recommendation breakdown are kept as a diffable JSON snapshot
-([posture/snapshots](../posture/snapshots)) rather than a screenshot, so no image is required for the
-numbers. Optional additive captures if a visual is wanted: `12-defender-cloud-score.png` (the 68.81%
-posture score), `13-recommendations.png` (the recommendation list), and an after-remediation
-re-score once the tenant recalculates. Same redaction (URL bar cropped, account chip blacked out).
+Shots `12` to `15` are the current-state captures for the posture-remediation phase
+([docs/10](../docs/10-posture-remediation.md)), taken once the tenant had accumulated data: the M365
+Secure Score (50.14%, 94 actions, up from the 32 in the earlier `09`), the Defender dashboard scope,
+the Exposure Management score and trend, and the TVM weakness volume (150 in org). The Defender for
+Cloud Secure Score (68.81%) stays a diffable JSON snapshot ([posture/snapshots](../posture/snapshots))
+rather than a screenshot, so the before/after is a file diff. Capture and redaction are scripted:
+`_raw/capture.ps1` (URL bar cropped) then `_raw/redact-chip.ps1` (top-right account chip blacked out).
