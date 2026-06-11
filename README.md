@@ -127,7 +127,9 @@ recalculates the score over the following 24 to 72 hours, so the after-score is 
 follow-up rather than asserted now. Full method, ordered plan, and detection-linkage table:
 [docs/10, posture remediation](docs/10-posture-remediation.md).
 
-![Microsoft Secure Score posture for the tenant](screenshots/09-secure-score.png)
+![Microsoft 365 Secure Score, current state (50.14%, 94 actions to review)](screenshots/12-secure-score-current.png)
+
+![Exposure Management score, 6-day trend, and recommendation list](screenshots/14-exposure-recommendations.png)
 
 ## Repository layout
 
