@@ -28,9 +28,9 @@ The top crop removes the browser URL bar (which carried the tenant ID). The port
 which carried the UPN, the organization name, and the profile photo. On `10` the incident-link field
 (which carried the subscription id) is also blacked out. No subscription IDs are visible in any frame.
 
-Still review before publishing:
-
-- [ ] **Caller email** `ievgen@<redacted-tenant>` in the older alert-detail shots (`06-inc-03`, `06-inc-04`) Query-results "Caller" column; blur if you prefer it not surfaced.
+In the alert-detail shots (`06-inc-03`, `06-inc-04`) the Query-results "Caller" column is blacked out
+(it carried a UPN), and the rule-description line was corrected from the early "SC-200 lab rule:"
+wording to the current rule name, matching the deployed `[DET]` catalog.
 
 ## Optional / not in v1
 
