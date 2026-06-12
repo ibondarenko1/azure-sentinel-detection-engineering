@@ -1,0 +1,140 @@
+﻿{
+    "label":  "after",
+    "capturedUtc":  "2026-06-11T18:11:55Z",
+    "source":  "Microsoft Defender for Cloud (ARM Microsoft.Security), subscription redacted",
+    "secureScore":  {
+                        "current":  21.33,
+                        "max":  31,
+                        "percent":  68.81,
+                        "weight":  44
+                    },
+    "controls":  [
+                     {
+                         "control":  "Enable encryption at rest",
+                         "current":  0.0,
+                         "max":  4,
+                         "percent":  0,
+                         "unhealthy":  1,
+                         "healthy":  0,
+                         "notApplicable":  0
+                     },
+                     {
+                         "control":  "Enable auditing and logging",
+                         "current":  0.0,
+                         "max":  1,
+                         "percent":  0,
+                         "unhealthy":  2,
+                         "healthy":  0,
+                         "notApplicable":  0
+                     },
+                     {
+                         "control":  "Implement security best practices",
+                         "current":  0.0,
+                         "max":  0,
+                         "percent":  0,
+                         "unhealthy":  2,
+                         "healthy":  1,
+                         "notApplicable":  2
+                     },
+                     {
+                         "control":  "Remediate vulnerabilities",
+                         "current":  0.0,
+                         "max":  0,
+                         "percent":  0,
+                         "unhealthy":  0,
+                         "healthy":  0,
+                         "notApplicable":  1
+                     },
+                     {
+                         "control":  "Protect applications against DDoS attacks",
+                         "current":  0.0,
+                         "max":  0,
+                         "percent":  0,
+                         "unhealthy":  0,
+                         "healthy":  0,
+                         "notApplicable":  1
+                     },
+                     {
+                         "control":  "Enable enhanced security features",
+                         "current":  0.0,
+                         "max":  0,
+                         "percent":  0,
+                         "unhealthy":  1,
+                         "healthy":  0,
+                         "notApplicable":  0
+                     },
+                     {
+                         "control":  "Manage access and permissions",
+                         "current":  1.33,
+                         "max":  4,
+                         "percent":  33,
+                         "unhealthy":  2,
+                         "healthy":  1,
+                         "notApplicable":  0
+                     },
+                     {
+                         "control":  "Restrict unauthorized network access",
+                         "current":  2.0,
+                         "max":  4,
+                         "percent":  50,
+                         "unhealthy":  1,
+                         "healthy":  1,
+                         "notApplicable":  0
+                     },
+                     {
+                         "control":  "Secure management ports",
+                         "current":  8.0,
+                         "max":  8,
+                         "percent":  100,
+                         "unhealthy":  0,
+                         "healthy":  1,
+                         "notApplicable":  0
+                     },
+                     {
+                         "control":  "Encrypt data in transit",
+                         "current":  4.0,
+                         "max":  4,
+                         "percent":  100,
+                         "unhealthy":  0,
+                         "healthy":  1,
+                         "notApplicable":  0
+                     },
+                     {
+                         "control":  "Apply system updates",
+                         "current":  6.0,
+                         "max":  6,
+                         "percent":  100,
+                         "unhealthy":  0,
+                         "healthy":  1,
+                         "notApplicable":  0
+                     }
+                 ],
+    "plans":  {
+                  "standard":  [
+                                   "Discovery",
+                                   "FoundationalCspm"
+                               ],
+                  "free":  [
+                               "VirtualMachines",
+                               "SqlServers",
+                               "AppServices",
+                               "StorageAccounts",
+                               "SqlServerVirtualMachines",
+                               "KubernetesService",
+                               "ContainerRegistry",
+                               "KeyVaults",
+                               "Dns",
+                               "Arm",
+                               "OpenSourceRelationalDatabases",
+                               "CosmosDbs",
+                               "Containers",
+                               "CloudPosture",
+                               "Api",
+                               "AI"
+                           ]
+              },
+    "assessments":  {
+                        "total":  51,
+                        "unhealthy":  18
+                    }
+}

@@ -20,6 +20,10 @@ Visual evidence for these detections. Full unredacted captures are staged in `_r
 | `13-defender-overview.png` | Defender portal dashboard, current scope: SOC optimization, UEBA, automation, connectors, secure score, devices |
 | `14-exposure-recommendations.png` | Exposure Management, exposure score 65 (Medium) + 6-day score-history trend + recommendation list |
 | `15-tvm-weaknesses-current.png` | Defender Vulnerability Management weaknesses, 150 in org / 13 critical / 1 exploitable (current volume) |
+| `16-secure-score-after.png` | M365 Secure Score after remediation, 50.79% (+7 points, Secure Boot 2023 certs) |
+| `17-device-inventory.png` | Device inventory: two records both `soc-sensor-01` (Server + Workstation), one dual-classified VM |
+| `18-tvm-weaknesses-after.png` | TVM weaknesses, current volume after remediation |
+| `19-exposure-after.png` | Exposure score after, 47 (down from 65) with 6-day downward trend + 3 open recommendations |
 
 ## Redaction
 

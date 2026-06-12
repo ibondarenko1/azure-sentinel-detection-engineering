@@ -124,17 +124,44 @@ Carried forward, prioritized, not silently dropped:
 - **Effort-gated:** storage private link, Azure Backup, guest configuration / attestation extensions,
   and the break-glass second owner.
 
-## Measure (after): pending re-score
+## Measure (after): the score moved on two of three planes
 
-Secure Score recalculates 24 to 72 hours after a change, so the after number is gathered in a
-follow-up pass, not claimed here. When it lands:
+Re-pulled 2026-06-11 ([`posture/snapshots/2026-06-11-after.json`](../posture/snapshots/2026-06-11-after.json)
+for the Defender for Cloud plane; portal captures for the M365 and exposure planes).
 
-```powershell
-.\collect-posture.ps1 -Label after   # writes posture/snapshots/<date>-after.json
-```
+| Plane | Before (06-10) | After (06-11) | Delta | Evidence |
+|-------|----------------|---------------|-------|----------|
+| Microsoft 365 Secure Score | 50.14%, 94 actions | **50.79%, 93 actions** | **+7.00 points** (Secure Boot 2023 certificates) | [16](../screenshots/16-secure-score-after.png) |
+| Exposure score | 65 (Medium) | **47 (Medium)** | **-18** (lower is better), 4 recs to 3 | [19](../screenshots/19-exposure-after.png) |
+| Defender for Cloud Secure Score | 68.81% (21.33/31) | 68.81% | 0, re-scan pending | snapshot JSON |
 
-The delta table (before vs after per control) and the after screenshot get filled from that snapshot.
-No improvement is asserted until the file exists.
+**What moved and why.** Item 3 of the plan (encryption at host) deallocated and restarted
+`soc-sensor-01`. On reboot the sensor installed pending Windows updates and picked up the Secure Boot
+2023 certificates. That cleared the "Update Windows 11" exposure recommendation (exposure 65 to 47)
+and earned the M365 Secure Boot action (+7 points). The maintenance window for the encryption fix
+paid out on two adjacent score planes before its own Defender for Cloud control even re-evaluated.
+
+**Defender for Cloud is still flat, by scan cadence not by failure.** The three DfC fixes are
+confirmed at the resource level (encryptionAtHost=true, diagnostic settings logsEnabled, security
+contact On), but the free-tier CSPM scanner re-evaluates assessments on its own cycle, so the
+encryption-at-rest (+4) and auditing (+1) controls have not flipped yet. Those points land on the
+next snapshot. Measured, not assumed.
+
+**One device, two records (not a deletion).** Defender inventory shows two device entries, both
+`soc-sensor-01` at the same IP, classified Server and Workstation. That is the single Azure VM
+dual-classified, not two machines, and the Azure Activity Log shows zero delete operations across
+all providers, so nothing was removed.
+
+![Microsoft 365 Secure Score after, 50.79% (+7 points)](../screenshots/16-secure-score-after.png)
+
+![Exposure score after, 47 with the 6-day downward trend](../screenshots/19-exposure-after.png)
+
+![Device inventory: two records are the one dual-classified sensor](../screenshots/17-device-inventory.png)
+
+**Still open (the direct exposure recommendations).** Three software-update recommendations remain on
+the sensor: update Edge to 149.0.4022.62, update Windows Server 2022 OS, update apps with vulnerable
+OpenSSL libraries. These are device-level patches, and `soc-sensor-01` is drivable via
+`az vm run-command`, so they are the next remediation step.
 
 ## Lesson
 
