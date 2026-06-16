@@ -22,10 +22,14 @@ import subprocess
 
 API_INC = "2023-11-01"
 LOC = "eastus"
-# rule title -> max minutes to wait (queryFrequency + ingestion budget)
+# rule title -> max minutes to wait (rule queryFrequency + AzureActivity ingestion budget).
+# AzureActivity (control-plane) ingestion into Log Analytics is variable and can run well past
+# an hour on a slow day; a 2026-06-15 run saw the incidents land ~89 min after the trigger, past
+# the old 45 min budget, even though both rules fired correctly. The budget is the worst-case
+# ingestion lag plus the rule's schedule, not the typical case.
 EXPECT = {
-    "[DET] Network Security Group rule modified": 45,
-    "[DET] Mass resource deletion": 35,
+    "[DET] Network Security Group rule modified": 120,
+    "[DET] Mass resource deletion": 105,
 }
 
 
