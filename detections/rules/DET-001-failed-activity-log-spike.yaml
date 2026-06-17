@@ -20,6 +20,7 @@ query: |
   AzureActivity
   | where TimeGenerated > ago(1h)
   | where ActivityStatusValue == "Failure"
+  | where isnotempty(Caller)
   | summarize FailureCount = count() by Caller, bin(TimeGenerated, 5m)
   | where FailureCount >= 8
 entityMappings:

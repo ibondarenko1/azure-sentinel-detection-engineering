@@ -52,6 +52,7 @@ def build_properties(rule):
     techs = rule.get("relevantTechniques", [])
     parents = sorted({t.split(".")[0] for t in techs})
     subs = sorted(t for t in techs if "." in t)
+    grouping = rule.get("incidentGrouping") or {}
     props = {
         "displayName": rule["name"],
         "description": rule.get("description", ""),
@@ -67,10 +68,20 @@ def build_properties(rule):
         "tactics": rule.get("tactics", []),
         "techniques": parents,
         "entityMappings": rule.get("entityMappings"),
+        # A scheduled rule whose queryPeriod is wider than its queryFrequency runs over
+        # overlapping look-back windows, so the same finding is re-emitted on consecutive
+        # runs (see the ingestion-latency case study). Grouping folds those repeat alerts
+        # into one incident per matching entity set instead of one incident per run.
+        # Default lookback = the rule's own queryPeriod so the whole detection window is
+        # deduplicated; a rule can override any field with an `incidentGrouping` block.
         "incidentConfiguration": {
             "createIncident": True,
-            "groupingConfiguration": {"enabled": False, "lookbackDuration": "PT5M",
-                                       "matchingMethod": "AllEntities", "reopenClosedIncident": False},
+            "groupingConfiguration": {
+                "enabled": grouping.get("enabled", True),
+                "lookbackDuration": grouping.get("lookbackDuration", rule["queryPeriod"]),
+                "matchingMethod": grouping.get("matchingMethod", "AllEntities"),
+                "reopenClosedIncident": grouping.get("reopenClosedIncident", False),
+            },
         },
     }
     if subs:

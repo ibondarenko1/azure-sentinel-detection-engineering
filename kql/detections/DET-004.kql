@@ -6,5 +6,6 @@ AzureActivity
 | where TimeGenerated > ago(1h)
 | where OperationNameValue endswith "/delete"
 | where ActivityStatusValue == "Success"
+| where isnotempty(Caller)
 | summarize DeleteCount = count(), DeletedResources = make_set(ResourceId, 10) by Caller, bin(TimeGenerated, 5m)
 | where DeleteCount >= 5

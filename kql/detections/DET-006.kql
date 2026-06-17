@@ -42,4 +42,3 @@ union
 | summarize Techniques = make_set(Technique), Evidence = make_set(Evidence, 12),
             FirstSeen = min(TimeGenerated), LastSeen = max(TimeGenerated), Signals = count()
     by DeviceName, Account
-| where Signals >= 1
