@@ -10,8 +10,12 @@ For each covered rule: run the `az` trigger, poll the Sentinel incidents API for
 incident, assert it fired within the rule's frequency + ingestion budget, clean up.
 Exit non-zero on miss.
 
-Auth: existing `az` context (OIDC in CI, or `az login` locally).
-Env: AZURE_SUBSCRIPTION_ID, SENTINEL_RESOURCE_GROUP (workspace RG), SENTINEL_WORKSPACE.
+Auth: existing `az` context (OIDC in CI, or `az login` locally). The poll window can run
+longer than the Azure access token's life, so in CI the loop re-mints a fresh GitHub OIDC
+token and re-runs `az login` periodically; without that the federated client assertion
+(valid ~5 min) expires mid-run and every poll fails with AADSTS700024.
+Env: AZURE_SUBSCRIPTION_ID, SENTINEL_RESOURCE_GROUP (workspace RG), SENTINEL_WORKSPACE,
+AZURE_CLIENT_ID (CI re-auth), ACTIONS_ID_TOKEN_REQUEST_URL/TOKEN (set by Actions id-token).
 """
 import os
 import sys
@@ -19,6 +23,7 @@ import json
 import time
 import datetime
 import subprocess
+import urllib.request
 
 API_INC = "2023-11-01"
 LOC = "eastus"
@@ -59,14 +64,44 @@ def trigger(rg):
     print("  mass delete (5 public IPs): ok")
 
 
-def poll(sub, rg, ws, cutoff):
+# Re-mint a fresh GitHub OIDC token and re-login. The federated client assertion lasts
+# ~5 min, while the poll window can be ~2 h, so the cached Azure access token eventually
+# needs a refresh the stale assertion can no longer back (AADSTS700024). Re-running az login
+# with a freshly requested id_token keeps the session valid for the whole window.
+# No-op outside Actions OIDC (locally the existing az login is used).
+REAUTH_EVERY = 40 * 60  # seconds; comfortably under the access-token lifetime
+
+
+def reauth(client_id, tenant_id):
+    req_url = os.environ.get("ACTIONS_ID_TOKEN_REQUEST_URL")
+    req_tok = os.environ.get("ACTIONS_ID_TOKEN_REQUEST_TOKEN")
+    if not (req_url and req_tok and client_id and tenant_id):
+        return False
+    request = urllib.request.Request(
+        req_url + "&audience=api://AzureADTokenExchange",
+        headers={"Authorization": "Bearer " + req_tok})
+    token = json.loads(urllib.request.urlopen(request, timeout=30).read())["value"]
+    az("login", "--service-principal", "-u", client_id, "-t", tenant_id,
+       "--federated-token", token, "--only-show-errors", "-o", "none")
+    return True
+
+
+def poll(sub, rg, ws, cutoff, client_id, tenant_id):
     base = (f"https://management.azure.com/subscriptions/{sub}/resourceGroups/{rg}"
             f"/providers/Microsoft.OperationalInsights/workspaces/{ws}"
             f"/providers/Microsoft.SecurityInsights/incidents?api-version={API_INC}&$top=60")
     deadline = time.time() + max(EXPECT.values()) * 60
     found = {}
+    last_login = time.time()
     print("== polling incidents ==")
     while time.time() < deadline and len(found) < len(EXPECT):
+        if time.time() - last_login > REAUTH_EVERY:
+            try:
+                if reauth(client_id, tenant_id):
+                    print("  re-authenticated (fresh OIDC token)")
+                last_login = time.time()
+            except Exception as e:
+                print("  re-auth error:", e)
         try:
             data = json.loads(az("rest", "--method", "get", "--url", base, "-o", "json"))
         except Exception as e:
@@ -93,10 +128,12 @@ def main():
     sub = os.environ.get("AZURE_SUBSCRIPTION_ID") or az("account", "show", "--query", "id", "-o", "tsv")
     rg = os.environ.get("SENTINEL_RESOURCE_GROUP", "sc200-lab")
     ws = os.environ.get("SENTINEL_WORKSPACE", "sc200-ws")
+    client_id = os.environ.get("AZURE_CLIENT_ID")
+    tenant_id = os.environ.get("AZURE_TENANT_ID") or az("account", "show", "--query", "tenantId", "-o", "tsv")
     cutoff = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%S")
     try:
         trigger(rg)
-        found = poll(sub, rg, ws, cutoff)
+        found = poll(sub, rg, ws, cutoff, client_id, tenant_id)
     finally:
         cleanup(rg)
     missing = [t for t in EXPECT if t not in found]
