@@ -7,4 +7,4 @@ AzureActivity
 | where ActivityStatusValue == "Failure"
 | where isnotempty(Caller)
 | summarize FailureCount = count() by Caller, bin(TimeGenerated, 5m)
-| where FailureCount >= 8
+| where FailureCount >= 10
