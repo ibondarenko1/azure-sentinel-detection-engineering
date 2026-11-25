@@ -1,0 +1,37 @@
+version: 1
+
+# Every rule must declare how this offline suite validates it.  `fixture` rules
+# execute in the local Kusto emulator.  `live_only` rules are intentionally
+# excluded when the rule consumes a data source that the emulator cannot model;
+# they must carry a reason so the exclusion is visible and reviewable.
+rules:
+  DET-001:
+    mode: fixture
+    fixture: fixtures/DET-001.json
+  DET-002:
+    mode: fixture
+    fixture: fixtures/DET-002.json
+  DET-003:
+    mode: fixture
+    fixture: fixtures/DET-003.json
+  DET-004:
+    mode: fixture
+    fixture: fixtures/DET-004.json
+  DET-005:
+    mode: fixture
+    fixture: fixtures/DET-005.json
+  DET-006:
+    mode: fixture
+    fixture: fixtures/DET-006.json
+  DET-007:
+    mode: fixture
+    fixture: fixtures/DET-007.json
+  DET-008:
+    mode: fixture
+    fixture: fixtures/DET-008.json
+  DET-009:
+    mode: fixture
+    fixture: fixtures/DET-009.json
+  DET-010:
+    mode: fixture
+    fixture: fixtures/DET-010.json

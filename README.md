@@ -1,50 +1,60 @@
-.# Azure Sentinel Detection Engineering
+# Microsoft Sentinel Detection Engineering
 
-Detection engineering on a live Microsoft Sentinel and Defender XDR environment I operate. Nine custom analytics rules span three planes, each mapped to MITRE ATT&CK and proven end to end: a controlled action triggers the rule, the rule raises an incident, and the incident gets investigated and documented. Seven watch the Azure **control plane** (`AzureActivity`), including a multi-stage correlation and an ARG-backed content rule; one watches the **endpoint** (Defender for Endpoint), with Defender Vulnerability Management feeding a hunting library; one watches **identity** (Entra ID `SigninLogs`). All deployed by the same PR-gated pipeline.
+Nine default Microsoft Sentinel analytics rules cover Azure Activity Log, Defender for Endpoint and Entra sign-ins. An opt-in preview adds Blob Storage reads. The repository includes KQL, synthetic event fixtures, a reviewable deployment plan, and incident evidence from a Sentinel and Defender XDR lab I operated.
 
-![Telemetry, rules, incidents, and the CI/CD pipeline](screenshots/demo.gif)
+| Start here | Inspect |
+|---|---|
+| Evaluate the rules without Azure | [Local checks](#quick-start) and [fixture coverage](tests/README.md) |
+| Review or deploy a change | [Rule delivery and rollback](docs/03-cicd.md) |
+| Start with a clean Azure lab | [Workspace bootstrap](docs/12-lab-bootstrap.md) |
+| Inspect data freshness and rule execution | [Workspace health](docs/13-workspace-health.md) |
+| Review documented incidents | [Incident investigations](investigations/) and [historical validation results](validation/RESULTS.md) |
 
-> A live single-tenant environment I operate end to end. Tenant and subscription identifiers and any PII are redacted in all screenshots.
+![Historical lab evidence: telemetry, rules, incidents and the CI/CD pipeline](screenshots/demo.gif)
 
-![deploy-detections](https://github.com/ibondarenko1/azure-sentinel-detection-engineering/actions/workflows/deploy-detections.yml/badge.svg)
-![detections](https://img.shields.io/badge/detections-9%20across%203%20planes-2da44e) ![ATT&CK](https://img.shields.io/badge/ATT%26CK-7%20techniques%20%7C%203%20gaps%20tracked-205b8f) ![validation](https://img.shields.io/badge/validation-5%2F5%20fired%20%7C%200%20false%20fires-2da44e)
+The last documented lab state is parked. The screenshots and incident writeups are historical. The local test suite and deployment plan work without that tenant. [Lab status](docs/04-validation.md#current-state)
 
-> Figures are traceable: coverage to the [ATT&CK layer](navigator/coverage-layer.json), validation to [RESULTS.md](validation/RESULTS.md). There is deliberately **no false-positive-rate badge**: a single-tenant environment cannot produce a meaningful FP rate, so the repo reports measured false fires over a real benign batch instead of a fabricated percentage ([metrics.yaml](detections/metrics.yaml) states this in full).
+![detection-tests](https://github.com/ibondarenko1/azure-sentinel-detection-engineering/actions/workflows/detection-tests.yml/badge.svg)
+
+The [ATT&CK layer](navigator/coverage-layer.json) documents technique coverage and gaps. The [results](validation/RESULTS.md) report what fired in the historical lab batch. Per-rule figures and their limits are in [metrics.yaml](detections/metrics.yaml).
 
 ---
 
 ## Quick start
 
-**Run the detection unit tests on a fork, no Azure needed.** Each rule's real KQL runs against synthetic fixtures in a local Kusto emulator, so the detection logic is verifiable without my tenant:
+Python 3.12 and the package in `requirements.txt` are enough to validate the catalog and inspect deployment payloads.
 
 ```bash
 git clone https://github.com/ibondarenko1/azure-sentinel-detection-engineering
 cd azure-sentinel-detection-engineering
-docker run -d --rm -p 8080:8080 -e ACCEPT_EULA=Y mcr.microsoft.com/azuredataexplorer/kustainer-linux:latest
-pip install pyyaml
-python tests/run-detection-tests.py
+python -m pip install -r requirements.txt
+python cicd/validate-detections.py
+python cicd/deploy-detections.py plan --output sentinel-plan.json
 ```
 
-This is the exact check CI runs on every pull request ([detection-tests](.github/workflows/detection-tests.yml)): it asserts each rule fires on malicious fixtures and stays silent on benign ones. The live harness in [validation/](validation/) goes further, driving a real benign and attack batch in a tenant and measuring true positives and false fires, but that one needs your own Azure subscription and `az login` (see [validation/README](validation/README.md)), so it is not "local". Deployment pipeline: [docs/03](docs/03-cicd.md). Contributing a rule: [CONTRIBUTING](CONTRIBUTING.md).
+To run the actual KQL against synthetic telemetry, start the [local Kusto emulator](tests/README.md). The test guide lists the signals covered and explains where fixtures stand in for a workspace dependency. See [CONTRIBUTING](CONTRIBUTING.md) for the PR workflow.
 
 ## Why this exists
 
-A detection is only credible once you can show it firing. This repo closes that loop across three planes, the Azure control plane, the endpoint, and identity: rule logic, controlled trigger, generated incident, investigation, and MITRE mapping. It goes past single-event rules with a multi-stage correlation (grant then deploy) and a content-aware rule that joins Azure Resource Graph posture to the change event. It is Sentinel analytics rules, KQL, and incident response against real telemetry rather than synthetic samples.
+The catalog includes a sequence rule for a privilege grant followed by a deployment and a rule that correlates an NSG change with Azure Resource Graph posture. The fixtures exercise rule logic, while the investigation notes show how alerts from earlier lab runs were triaged.
 
 ## Detection-as-Code
 
-The rules are not clicked into the portal. They are **versioned YAML deployed by a PR-gated pipeline**. Editing a detection means opening a pull request; CI validates it, a reviewer approves, and merge to `main` deploys it to Sentinel via **OIDC (no stored secrets)**, idempotently by rule GUID (API `2025-09-01`).
+Pull requests validate the catalog and test KQL without Azure. The `validate` job publishes a JSON plan with rule payloads, required tables and watchlists. `diff` compares the desired rules with an Azure workspace. When deployment is enabled, the `main` branch writes changed rules from a protected OIDC environment and verifies the managed settings by GUID.
 
 ```mermaid
 flowchart LR
-  D[Edit rule YAML] --> PR[Pull request] --> V[CI validate] -->|review| M[Merge main] --> CD[OIDC deploy] --> S[Sentinel sc200-ws]
+  D[Edit rule YAML] --> PR[Pull request] --> V[Offline validation and plan]
+  V -->|Review| M[Merge to main]
+  M -->|If enabled| CD[Protected OIDC deployment]
+  CD --> S[Sentinel write and readback]
 ```
 
 - Source of truth: [`detections/rules/*.yaml`](detections/rules) · Pipeline: [`.github/workflows/deploy-detections.yml`](.github/workflows/deploy-detections.yml) · Deployer/validator: [`cicd/`](cicd) · Details: [docs/03-cicd.md](docs/03-cicd.md)
 
 ![CI/CD pipeline runs](screenshots/10-cicd-pipeline.png)
 
-A real change went through it: [PR #1](https://github.com/ibondarenko1/azure-sentinel-detection-engineering/pull/1) tightened the DET-001 threshold (10 to 8); CI validated it, and the merge deployed it to the live `sc200-ws` rule. That step, rules deploying automatically from git by reviewed PR, is what separates a detection **engineer** from an analyst who finished a course.
+[PR #1](https://github.com/ibondarenko1/azure-sentinel-detection-engineering/pull/1) records the historical workflow applying the DET-001 threshold change from 10 to 8 to the lab workspace.
 
 ## Architecture
 
@@ -70,26 +80,27 @@ flowchart LR
 | ID | Detection | Severity | MITRE tactic | Technique |
 |----|-----------|----------|--------------|-----------|
 | [DET-001](detections/DET-001-failed-activity-log-spike.md) | Failed Activity Log operations spike | Medium | Discovery | [T1087](https://attack.mitre.org/techniques/T1087/) Account Discovery |
-| [DET-002](detections/DET-002-nsg-rule-modified.md) | Network Security Group rule modified | Medium | Defense Evasion | [T1562](https://attack.mitre.org/techniques/T1562/) Impair Defenses |
+| [DET-002](detections/DET-002-nsg-rule-modified.md) | Network Security Group rule modified | Medium | Defense Impairment | [T1686.001](https://attack.mitre.org/techniques/T1686/001/) Cloud Firewall |
 | [DET-003](detections/DET-003-rbac-role-assignment-changes.md) | RBAC role assignment changes | Medium | Privilege Escalation / Persistence | [T1098](https://attack.mitre.org/techniques/T1098/) Account Manipulation |
 | [DET-004](detections/DET-004-mass-resource-deletion.md) | Mass resource deletion | **High** | Impact | [T1485](https://attack.mitre.org/techniques/T1485/) Data Destruction |
 | [DET-005](detections/DET-005-suspicious-deployment-non-owner.md) | Suspicious resource deployment by non-owner | Medium | Persistence | [T1098](https://attack.mitre.org/techniques/T1098/) Account Manipulation |
 | [DET-006](detections/DET-006-lsass-credential-access.md) | LSASS credential access (endpoint) | **High** | Credential Access | [T1003.001](https://attack.mitre.org/techniques/T1003/001/) LSASS Memory |
 | [DET-007](detections/DET-007-rbac-grant-then-deploy.md) | Privilege grant followed by deployment (correlation) | **High** | Privilege Escalation / Persistence | [T1098](https://attack.mitre.org/techniques/T1098/) Account Manipulation |
 | [DET-008](detections/DET-008-signin-success-after-failures.md) | Successful sign-in after repeated failures (identity) | Medium | Credential Access / Initial Access | [T1110](https://attack.mitre.org/techniques/T1110/) Brute Force, [T1078](https://attack.mitre.org/techniques/T1078/) Valid Accounts |
-| [DET-009](detections/DET-009-nsg-opened-inbound-any.md) | NSG rule change exposed inbound from Any (ARG content) | **High** | Defense Evasion | [T1562.007](https://attack.mitre.org/techniques/T1562/007/) Disable/Modify Cloud Firewall |
+| [DET-009](detections/DET-009-nsg-opened-inbound-any.md) | Change to an NSG security rule listed as open inbound from Any (ARG) | **High** | Defense Impairment | [T1686.001](https://attack.mitre.org/techniques/T1686/001/) Cloud Firewall |
+| [DET-010](detections/DET-010-storage-blob-bulk-read.md) | Bulk Blob Storage reads, opt-in preview | Medium | Collection | [T1530](https://attack.mitre.org/techniques/T1530/) Data from Cloud Storage |
 
 ![Detection rules overview](screenshots/02-detection-rules-overview.png)
 
 ## Results
 
-Each detection was triggered with a controlled, self-reverted administrative action and produced a real incident:
+The incident queue below shows results from the historical lab runs.
 
 ![Incidents queue](screenshots/05-incidents-queue-populated.png)
 
-Current operational state of the workspace: 10 analytics rules enabled, 4 active data connectors, an automation rule, and live data flowing. The 10 enabled rules are the nine custom `[DET]` scheduled rules in this catalog plus Microsoft's built-in Fusion rule (Advanced Multistage Attack Detection), which is on by default and not authored here; the nine figure elsewhere in this README counts the custom rules only.
+The captured workspace had nine custom scheduled rules in addition to Microsoft's built-in Fusion rule. The screenshots record that earlier state. DET-008 has fixture evidence and its live incident evidence remains pending. The revised DET-009 resource-ID correlation also needs a fresh workspace witness.
 
-![Microsoft Sentinel overview, current state](screenshots/11-sentinel-overview.png)
+![Microsoft Sentinel workspace overview from the lab run](screenshots/11-sentinel-overview.png)
 
 Five incidents are written up as full investigations:
 - [INV-01, Mass resource deletion (High)](investigations/INV-01-mass-resource-deletion.md)
@@ -98,22 +109,22 @@ Five incidents are written up as full investigations:
 - [INV-04, NSG opened inbound from Any (High)](investigations/INV-04-nsg-opened-inbound.md), ARG content correlation (DET-009)
 - [INV-05, Privilege grant then deployment (High)](investigations/INV-05-grant-then-deploy.md), multi-stage correlation (DET-007)
 
-Beyond one-off triggers, a [validation harness](validation/) drives a real **benign + attack** batch in the tenant and runs each rule's KQL against it, so false positives are **measured, not assumed**. Latest run ([results](validation/RESULTS.md)): 5/5 attack scenarios fired (DET-002/003/004/007/009) and 0 false fires on the benign stream (allow-listed owner deploy, sub-threshold deletes, deploy-without-grant). It does not fake production volume; it converts "0% FP at N=1" into a measured "0 false fires over a real benign batch".
+The [historical batch](validation/RESULTS.md) recorded five of five expected signals and zero false fires on its three benign scenarios. The DET-009 result used the earlier watchlist and applies to that version of the rule only.
 
 ## ATT&CK coverage
 
-A coverage map with explicit gaps is more honest than a list of rules. The [ATT&CK Navigator layer](navigator/coverage-layer.json) ([how to load](navigator/README.md)) shows both:
+The [ATT&CK Navigator layer](navigator/coverage-layer.json) records historical lab evidence, fixture evidence, and gaps. [Load the layer](navigator/README.md)
 
-| Covered (deployed rule) | Known gap, tracked as an issue |
+| Mapped in the default catalog | Tracked extensions |
 |-------------------------|---------------------------------|
-| T1087 Account Discovery (DET-001) | [T1530 Data from Cloud Storage](../../issues/12), data-plane detection |
-| T1562.007 Disable/Modify Cloud Firewall (DET-002 / DET-009) | [T1496 Resource Hijacking](../../issues/13), spend/mining anomaly |
+| T1087 Account Discovery (DET-001) | [T1530 Data from Cloud Storage](../../issues/12), DET-010 preview with live evidence pending |
+| T1686.001 Cloud Firewall (DET-002 / DET-009) | [T1496 Resource Hijacking](../../issues/13), spend/mining anomaly |
 | T1098 Account Manipulation (DET-003 / DET-005 / DET-007) | [T1526 Cloud Service Discovery](../../issues/14), strengthen heuristic |
 | T1485 Data Destruction (DET-004) | |
 | T1003.001 LSASS Memory (DET-006) | |
 | T1110 Brute Force / T1078 Valid Accounts (DET-008) | |
 
-The gaps are not static text. Each one is a live [`detection-gap` issue](../../issues?q=is%3Aissue+label%3Adetection-gap), so the roadmap is a clickable backlog.
+Follow connector and validation work in the [`detection-gap` issues](../../issues?q=is%3Aissue+label%3Adetection-gap).
 
 **Why these rules and not others:** [docs/08, detection strategy and threat model](docs/08-detection-strategy.md) maps the catalog to a cloud kill chain and risk-ranks the gaps. **How a rule gets tuned:** [docs/09, a measured DET-005 tuning loop](docs/09-tuning-case-study.md) takes a rule from "fires on every write" to a measured zero false positives on the validation harness.
 
@@ -129,7 +140,7 @@ The detections start on the Azure control plane; this phase adds the endpoint pl
 
 ![Device inventory, soc-sensor-01 Active](screenshots/08-device-active.png)
 
-![Defender Vulnerability Management weaknesses, current volume (150 in org, 13 critical)](screenshots/15-tvm-weaknesses-current.png)
+![Lab capture of Defender Vulnerability Management weaknesses (150 in org, 13 critical)](screenshots/15-tvm-weaknesses-current.png)
 
 ## Posture remediation
 
@@ -148,7 +159,7 @@ recalculates the score over the following 24 to 72 hours, so the after-score is 
 follow-up rather than asserted now. Full method, ordered plan, and detection-linkage table:
 [docs/10, posture remediation](docs/10-posture-remediation.md).
 
-![Microsoft 365 Secure Score, current state (50.14%, 94 actions to review)](screenshots/12-secure-score-current.png)
+![Lab capture of Microsoft 365 Secure Score (50.14%, 94 actions to review)](screenshots/12-secure-score-current.png)
 
 ![Exposure Management score, 6-day trend, and recommendation list](screenshots/14-exposure-recommendations.png)
 
@@ -169,7 +180,7 @@ Full criterion-by-criterion table and the how-it-reads-in-an-audit note:
 ```
 detections/rules  rule source-of-truth (Sentinel YAML, deployed by CI)
 detections/*.md   one card per rule: logic, MITRE, trigger, evidence
-detections/metrics.yaml  per-detection metrics (volume, FP rate, TP, MTTD)
+detections/metrics.yaml  per-detection historical observations and latency estimates
 tests/            synthetic-log unit tests (Kusto emulator, fork-runnable)
 validation/       live mixed-activity harness: benign + attack streams, measured TP/FP
 cicd/ + .github   Detection-as-Code pipeline (deploy, validate, regression)
@@ -186,11 +197,11 @@ screenshots/      visual evidence
 
 ## Skills demonstrated
 
-KQL · Microsoft Sentinel scheduled analytics rules · multi-stage correlation rules · Entra ID identity detection (SigninLogs) · allow-list watchlists (`_GetWatchlist`) · Azure Resource Graph posture-as-content (scheduled Action) · Microsoft Defender XDR · Microsoft Defender for Endpoint · Defender Vulnerability Management (TVM) · advanced hunting (Device / DeviceTvm tables) · Microsoft Secure Score · Defender for Cloud posture remediation (CSPM, MCSB) · SOC 2 Common Criteria control mapping · Detection-as-Code (GitHub Actions, OIDC) · SOAR (Logic Apps automation rules) · Sigma (vendor-neutral) · Atomic Red Team validation · incident triage and investigation · MITRE ATT&CK mapping · Azure control-plane (Activity Log) monitoring.
+KQL · Microsoft Sentinel scheduled analytics rules · multi-stage correlation rules · Entra ID identity detection (SigninLogs) · allow-list watchlists (`_GetWatchlist`) · Azure Resource Graph watchlist refresh · Microsoft Defender XDR · Microsoft Defender for Endpoint · Defender Vulnerability Management (TVM) · advanced hunting (Device / DeviceTvm tables) · Microsoft Secure Score · Defender for Cloud posture remediation (CSPM, MCSB) · SOC 2 Common Criteria control mapping · Detection-as-Code (GitHub Actions, OIDC) · SOAR (Logic Apps automation rules) · Sigma (vendor-neutral) · Atomic Red Team validation · incident triage and investigation · MITRE ATT&CK mapping · Azure control-plane (Activity Log) monitoring.
 
 ## Contributing
 
-This is a personal portfolio, but it is structured so a detection change is a reviewable pull request, not a portal click. If you fork it or want to propose a rule, [CONTRIBUTING.md](CONTRIBUTING.md) covers the workflow: edit the rule YAML, regenerate the KQL mirror, extend the test fixture, run the unit tests locally, and open a PR that the same CI gates check.
+[CONTRIBUTING.md](CONTRIBUTING.md) covers rule edits, KQL mirrors, fixture cases and the checks expected in a pull request.
 
 ## Credentials
 

@@ -12,12 +12,9 @@
 
 ## What it catches
 
-The **escalation-then-action** chain: one principal **creates an RBAC role assignment** and then
-**deploys a resource** (Compute / Storage / Web) **within 30 minutes**. Each half is its own
-single-stage rule, [DET-003](DET-003-rbac-role-assignment-changes.md) (the grant) and
-[DET-005](DET-005-suspicious-deployment-non-owner.md) (the deploy). DET-007 is the correlation an
-atomic catalog misses: granting access and immediately using it is the behaviour, not either event
-in isolation. It is **deterministic** (a time-bounded self-join), not a threshold or a baseline.
+One Azure Activity Log caller **creates an RBAC role assignment** and then **deploys a Compute,
+Storage, or Web resource** within 30 minutes. Review the assigned role, its recipient, and the
+resource before drawing a conclusion about the caller's privileges.
 
 ## Detection logic
 
@@ -41,34 +38,26 @@ let deploys =
     | project DeployTime = TimeGenerated, Caller, DeployOp = OperationNameValue, ResourceId;
 grants
 | join kind=inner deploys on Caller
-| where DeployTime between (GrantTime .. (GrantTime + corrWindow))
+| where DeployTime > GrantTime and DeployTime <= (GrantTime + corrWindow)
 | summarize GrantTime = min(GrantTime), FirstDeploy = min(DeployTime),
             DeployedResources = make_set(ResourceId, 20), DeployCount = dcount(ResourceId)
     by Caller, GrantIp
 ```
 
-The join is on `Caller`; the `between` clause enforces *deploy after grant, within the window*, so
-a deploy that precedes the grant or lands more than 30 minutes later does not correlate.
-
-## How to trigger (simulation)
-
-From one principal: add a role assignment (`Microsoft.Authorization/roleAssignments/write`), then
-within 30 minutes deploy a Compute/Storage/Web resource. The pair raises one incident.
+`Caller` identifies the actor that initiated each operation. The deployment time must be strictly
+later than the grant and at most 30 minutes after it.
 
 ## Expected result
 
-Fires only when the same caller's grant is followed by a watched-provider deploy inside the window;
-silent for a lone grant, a lone deploy, a deploy-before-grant, the two steps by different callers,
-or steps more than 30 minutes apart (see `tests/fixtures/DET-007.json`).
+The fixtures exercise two matching callers, including a deployment exactly 30 minutes after the
+grant. The silent fixture covers independent actors, deployments before the grant, equal timestamps,
+and a deployment 31 minutes later. [Fixture](../tests/fixtures/DET-007.json)
 
 ## Tuning notes
 
-- `corrWindow` is the sensitivity knob; widen for slower operators, narrow to cut admin-session noise.
-- Pairs with the v2 single-stage rules: an automation principal allow-listed in `soc-automation-principals`
-  / `soc-deploy-owners` is already suppressed upstream, so DET-007 focuses on un-allow-listed chains.
+- Adjust `corrWindow` against the timing of approved operational workflows.
+- Compare the caller and resource against the relevant deployment or change record. The single-stage
+  DET-003 and DET-005 use their own allow-lists.
 
-**Evasion.** Split the two steps across more than 30 minutes, use two principals (grant with one,
-deploy with another), or grant via PIM/group membership so the `roleAssignments/write` is delayed.
-
-**Validation.** Fixture fire/silent in `tests/fixtures/DET-007.json` (run by `tests/run-detection-tests.py`);
-ATT&CK [T1098](https://attack.mitre.org/techniques/T1098/). See [docs/04-validation.md](../docs/04-validation.md).
+The historical lab observed one role assignment followed eight minutes later by a deployment.
+The current time-boundary cases run in the emulator. [Investigation](../investigations/INV-05-grant-then-deploy.md)

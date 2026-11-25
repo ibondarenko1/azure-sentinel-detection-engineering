@@ -6,7 +6,7 @@ description: |
   security rule. Loosening an NSG (e.g. opening a management port to the internet)
   weakens network defenses. Portable Sigma equivalent of DET-002.
 references:
-  - https://attack.mitre.org/techniques/T1562/007/
+  - https://attack.mitre.org/techniques/T1686/001/
 author: Ievgen Bondarenko
 date: 2026-06-07
 logsource:
@@ -21,5 +21,5 @@ falsepositives:
   - Legitimate network change management / infrastructure-as-code applying NSG updates
 level: medium
 tags:
-  - attack.defense-evasion
-  - attack.t1562.007
+  - attack.defense-impairment
+  - attack.t1686.001

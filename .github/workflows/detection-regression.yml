@@ -3,24 +3,27 @@ name: detection-regression
 # Proves the deployed rules still fire: trigger atomic-aligned actions, assert
 # matching incidents appear, clean up.
 #
-# On-demand only while the workspace is parked. The weekly cron ("0 6 * * 1",
-# Mondays 06:00 UTC) is commented out below: with Sentinel off the run cannot
-# reach the incidents API and every scheduled run fails. Restore the cron once
-# the workspace is back.
+# Historical lab workflow. Keep disabled until the trigger and cleanup are
+# scoped to resources owned by each run.
 
 on:
-  # schedule:
-  #   - cron: "0 6 * * 1"   # Mondays 06:00 UTC
   workflow_dispatch:
 
 permissions:
-  id-token: write
   contents: read
 
 jobs:
   regression:
+    if: github.ref == 'refs/heads/main' && vars.SENTINEL_LAB_REGRESSION_ENABLED == 'true'
     runs-on: ubuntu-latest
-    environment: sentinel-prod
+    environment: sentinel-lab-regression
+    timeout-minutes: 150
+    concurrency:
+      group: sentinel-lab-regression
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      id-token: write
     env:
       SENTINEL_RESOURCE_GROUP: sc200-lab
       SENTINEL_WORKSPACE: sc200-ws

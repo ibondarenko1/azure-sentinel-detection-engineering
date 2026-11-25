@@ -1,0 +1,77 @@
+{
+  "_comment": "DET-006 (Defender XDR): fires for a direct LSASS handle open, a dump-tool command line, or a Defender-prevented LSASS alert. Each scenario supplies all three source tables so union state cannot leak between cases.",
+  "expected_counts": {
+    "fires": 3,
+    "silent": 0
+  },
+  "tables": {
+    "DeviceEvents": {
+      "fires": [
+        {
+          "DeviceName": "host-handle",
+          "ActionType": "OpenProcessApiCall",
+          "FileName": "lsass.exe",
+          "InitiatingProcessFileName": "mimikatz.exe",
+          "InitiatingProcessAccountName": "alice",
+          "minutesAgo": 10
+        }
+      ],
+      "silent": [
+        {
+          "DeviceName": "host01",
+          "ActionType": "OpenProcessApiCall",
+          "FileName": "lsass.exe",
+          "InitiatingProcessFileName": "MsSense.exe",
+          "InitiatingProcessAccountName": "system",
+          "minutesAgo": 10
+        },
+        {
+          "DeviceName": "host01",
+          "ActionType": "OpenProcessApiCall",
+          "FileName": "winlogon.exe",
+          "InitiatingProcessFileName": "unknown.exe",
+          "InitiatingProcessAccountName": "alice",
+          "minutesAgo": 9
+        }
+      ]
+    },
+    "DeviceProcessEvents": {
+      "fires": [
+        {
+          "DeviceName": "host-process",
+          "FileName": "procdump64.exe",
+          "ProcessCommandLine": "[fixture] lsass MiniDump marker",
+          "AccountName": "bob",
+          "minutesAgo": 8
+        }
+      ],
+      "silent": [
+        {
+          "DeviceName": "host01",
+          "FileName": "backup.exe",
+          "ProcessCommandLine": "backup.exe --target C:\\Data",
+          "AccountName": "backup",
+          "minutesAgo": 8
+        }
+      ]
+    },
+    "SecurityAlert": {
+      "fires": [
+        {
+          "ProviderName": "MDATP",
+          "AlertName": "Lsassdump behavior prevented",
+          "Entities": "[{\"Type\":\"host\",\"HostName\":\"host-alert\"}]",
+          "minutesAgo": 7
+        }
+      ],
+      "silent": [
+        {
+          "ProviderName": "MDATP",
+          "AlertName": "Suspicious script behavior",
+          "Entities": "[{\"Type\":\"host\",\"HostName\":\"host01\"}]",
+          "minutesAgo": 7
+        }
+      ]
+    }
+  }
+}

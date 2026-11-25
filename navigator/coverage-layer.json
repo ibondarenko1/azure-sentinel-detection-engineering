@@ -1,33 +1,33 @@
 {
   "name": "Azure Sentinel Detection Engineering Coverage",
-  "versions": { "attack": "15", "navigator": "4.9.1", "layer": "4.5" },
+  "versions": { "attack": "20", "navigator": "5.3.2", "layer": "4.5" },
   "domain": "enterprise-attack",
-  "description": "Coverage of the deployed detections (7 AzureActivity control-plane incl. a multi-stage correlation and an ARG-backed NSG content rule, 1 Defender for Endpoint, 1 Entra ID identity), with honest gaps in the same tactics. Green = covered by a deployed rule; red = known gap.",
+  "description": "Rule mappings checked against Enterprise ATT&CK v20.1. Green = historical lab evidence for a mapped rule. Amber = fixture evidence. Red = a tracked gap. Check the comments for rule and revision context.",
   "sorting": 0,
   "hideDisabled": false,
   "techniques": [
     { "techniqueID": "T1087", "score": 100, "color": "#2da44e", "comment": "DET-001 Failed Activity Log operations spike (heuristic, failed-permission probing)" },
-    { "techniqueID": "T1562.007", "score": 100, "color": "#2da44e", "comment": "DET-002 NSG rule change + DET-009 content-confirmed open inbound (ARG)" },
-    { "techniqueID": "T1562", "score": 100, "color": "#2da44e", "comment": "Covered via sub-technique T1562.007 (DET-002 / DET-009)" },
+    { "techniqueID": "T1686.001", "score": 100, "color": "#2da44e", "comment": "DET-002 historical NSG alert. DET-009 resource-ID posture correlation has fixture evidence." },
     { "techniqueID": "T1098.003", "score": 100, "color": "#2da44e", "comment": "DET-003 RBAC role assignment changes" },
     { "techniqueID": "T1098", "score": 100, "color": "#2da44e", "comment": "DET-003 (T1098.003) + DET-005 non-owner deployment + DET-007 grant-then-deploy correlation" },
     { "techniqueID": "T1485", "score": 100, "color": "#2da44e", "comment": "DET-004 Mass resource deletion" },
     { "techniqueID": "T1003.001", "score": 100, "color": "#2da44e", "comment": "DET-006 LSASS credential access (Defender for Endpoint)" },
     { "techniqueID": "T1003", "score": 100, "color": "#2da44e", "comment": "Covered via sub-technique T1003.001 (DET-006)" },
-    { "techniqueID": "T1110", "score": 100, "color": "#2da44e", "comment": "DET-008 Successful sign-in after repeated failures (failure-then-success correlation on SigninLogs)" },
-    { "techniqueID": "T1078", "score": 100, "color": "#2da44e", "comment": "DET-008 Valid Accounts (a brute-forced/sprayed credential that succeeds)" },
+    { "techniqueID": "T1110", "score": 100, "color": "#e0a100", "comment": "DET-008 fixture evidence for repeated failures preceding a successful sign-in" },
+    { "techniqueID": "T1078", "score": 100, "color": "#e0a100", "comment": "DET-008 fixture evidence for the sign-in sequence. One pattern within Valid Accounts." },
 
     { "techniqueID": "T1526", "score": 25, "color": "#e85d4c", "comment": "GAP, Cloud Service Discovery: only partially implied by DET-001" },
-    { "techniqueID": "T1530", "score": 25, "color": "#e85d4c", "comment": "GAP, Data from Cloud Storage: no storage data-plane access detection" },
+    { "techniqueID": "T1530", "score": 100, "color": "#e0a100", "comment": "DET-010 preview. OAuth bulk read fixtures pass. Live baseline and incident pending." },
     { "techniqueID": "T1496", "score": 25, "color": "#e85d4c", "comment": "GAP, Resource Hijacking: no crypto-mining / spend-anomaly detection" }
   ],
   "gradient": { "colors": ["#ffffff", "#2da44e"], "minValue": 0, "maxValue": 100 },
   "legendItems": [
-    { "label": "Covered by a deployed detection", "color": "#2da44e" },
-    { "label": "Known gap (not yet covered)", "color": "#e85d4c" }
+    { "label": "Historical lab evidence", "color": "#2da44e" },
+    { "label": "Fixture evidence", "color": "#e0a100" },
+    { "label": "Tracked gap", "color": "#e85d4c" }
   ],
   "metadata": [
-    { "name": "rules", "value": "9 scheduled analytics rules (7 AzureActivity + 1 Defender for Endpoint + 1 Entra ID identity)" },
+    { "name": "rules", "value": "9 default analytics rules and one StorageBlobLogs preview rule" },
     { "name": "repo", "value": "github.com/ibondarenko1/azure-sentinel-detection-engineering" }
   ],
   "showTacticRowBackground": true,

@@ -1,0 +1,22 @@
+// DET-010, Bulk reads from a monitored Blob container
+// MITRE: Collection / T1530
+// Source: StorageBlobLogs | Frequency: every 15 min | Lookback: 1h
+// Generated from detections/rules/DET-010-storage-blob-bulk-read.yaml by cicd/sync-kql-mirror.py, do not edit by hand.
+let scope = _GetWatchlist('soc-sensitive-blob-reads')
+    | project SearchKey = tolower(tostring(SearchKey));
+StorageBlobLogs
+| where TimeGenerated > ago(1h)
+| where OperationName =~ 'GetBlob' and AuthenticationType =~ 'OAuth'
+| where toint(StatusCode) between (200 .. 299)
+| where isnotempty(RequesterTenantId) and isnotempty(RequesterObjectId) and isnotempty(ObjectKey)
+| extend Container = tolower(extract(@'^https?://[^/]+/([^/?]+)/', 1, Uri)),
+         StorageAccount = tolower(AccountName), StorageResourceId = tolower(_ResourceId),
+         TenantId = tolower(RequesterTenantId), PrincipalId = tolower(RequesterObjectId)
+| where isnotempty(Container) and isnotempty(StorageAccount)
+| extend ContainerKey = strcat(StorageAccount, '/', Container)
+| where strcat('scope:', ContainerKey) in (scope)
+| where strcat('backup:', ContainerKey, '/', TenantId, '/', PrincipalId) !in (scope)
+| summarize DistinctBlobs = dcount(ObjectKey), Reads = count(), Bytes = sum(ResponseBodySize),
+            LastRead = max(TimeGenerated)
+    by StorageAccount, Container, StorageResourceId, TenantId, PrincipalId, ReadWindow = bin(TimeGenerated, 10m)
+| where DistinctBlobs >= 20

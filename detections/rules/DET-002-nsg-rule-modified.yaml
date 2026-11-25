@@ -21,7 +21,7 @@ triggerThreshold: 0
 tactics:
   - DefenseEvasion
 relevantTechniques:
-  - T1562
+  - T1686.001
 query: |
   // soc-nsg-change-principals: SearchKey = objectId of IaC/change-management identities whose
   // NSG securityRules changes are routine. Maintained in the tenant; no identities in the repo.
@@ -44,7 +44,7 @@ entityMappings:
       - identifier: Address
         columnName: CallerIp
 metadata:
-  atomic: "T1562.007, Impair Defenses: Disable or Modify Cloud Firewall (NSG rule modification)."
+  atomic: "T1686.001, Cloud Firewall (NSG rule modification)."
   requiredFields: [AzureActivity.OperationNameValue, AzureActivity.ActivityStatusValue, AzureActivity.Caller, AzureActivity.ResourceId, AzureActivity.Properties_d]
   dataPlane: "AzureActivity control plane; IaC allow-list via the soc-nsg-change-principals watchlist."
   contentLimitation: "The NSG rule's access/direction/source is not in AzureActivity. To alert specifically on 'opens inbound Allow from Any', join the NSG rule config from Azure Resource Graph (resourcechanges) or NSG flow/diagnostic logs; tracked as a follow-up data-onboarding item."

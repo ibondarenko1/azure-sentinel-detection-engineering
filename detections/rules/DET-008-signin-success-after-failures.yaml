@@ -5,7 +5,9 @@ description: |
   the classic brute-force / password-spray success or a compromised credential finally accepted.
   Adds the identity plane to the control-plane and endpoint detections: it reads Entra ID SigninLogs
   (streamed to sc200-ws via the Entra diagnostic export), correlating failures to a later success per
-  user. Escalate when the successful sign-in IP/geo differs from the failures.
+  user. Each success is evaluated against failures that occurred before it. When a user has more
+  than one qualifying success, the output keeps the earliest one and carries its App, IP, and time
+  together. Escalate when that selected success IP differs from all earlier failures.
 severity: Medium
 requiredDataConnectors:
   - connectorId: AzureActiveDirectory
@@ -28,20 +30,32 @@ query: |
       SigninLogs
       | where TimeGenerated > ago(lookback)
       | where ResultType != "0"
-      | summarize Failures = count(), FailIPs = make_set(IPAddress, 10), FirstFail = min(TimeGenerated)
-          by UserPrincipalName
-      | where Failures >= failThreshold;
-  SigninLogs
-  | where TimeGenerated > ago(lookback)
-  | where ResultType == "0"
-  | project SuccessTime = TimeGenerated, UserPrincipalName, SuccessIP = IPAddress, App = AppDisplayName
+      | where isnotempty(UserPrincipalName)
+      | project FailTime = TimeGenerated, UserPrincipalName, FailureIP = IPAddress
+      | distinct FailTime, UserPrincipalName, FailureIP;
+  let successes =
+      SigninLogs
+      | where TimeGenerated > ago(lookback)
+      | where ResultType == "0"
+      | where isnotempty(UserPrincipalName)
+      | project SuccessTime = TimeGenerated, UserPrincipalName, SuccessIP = IPAddress, App = AppDisplayName
+      | distinct SuccessTime, UserPrincipalName, SuccessIP, App;
+  // Count only failures that occurred before each individual success. This prevents a later
+  // failure from retroactively qualifying an earlier success in the same one-hour window.
+  successes
   | join kind=inner failures on UserPrincipalName
-  | where SuccessTime > FirstFail
-  | extend SuccessFromNewIp = array_index_of(FailIPs, SuccessIP) < 0
-  | summarize SuccessTime = min(SuccessTime), Failures = max(Failures),
-              NewIpSuccesses = countif(SuccessFromNewIp), SuccessIP = min(SuccessIP), App = min(App)
-      by UserPrincipalName, FirstFail
-  | extend NewSourceIp = NewIpSuccesses > 0
+  | where FailTime < SuccessTime
+  | summarize Failures = count(), FirstFail = min(FailTime),
+              MatchingIPFailures = countif(FailureIP == SuccessIP)
+      by UserPrincipalName, SuccessTime, SuccessIP, App
+  | where Failures >= failThreshold
+  // Source-IP membership is evaluated across every prior failure row; there is no capped set.
+  | extend NewSourceIp = isnotempty(SuccessIP) and MatchingIPFailures == 0
+  // One row per user: choose the earliest qualifying success. The fields are selected from
+  // that same row, so App, IP, and timestamp cannot be mixed across two successful sign-ins.
+  | summarize arg_min(SuccessTime, FirstFail, Failures, SuccessIP, App, NewSourceIp),
+              NewIpSuccesses = countif(NewSourceIp)
+      by UserPrincipalName
 entityMappings:
   - entityType: Account
     fieldMappings:
@@ -57,5 +71,5 @@ metadata:
   dataPlane: "Entra ID SigninLogs, streamed to sc200-ws by the entra-id-logs-to-sc200-ws diagnostic export."
   falsePositives:
     - "A user who mistyped their password several times then signed in successfully (very common); the NewSourceIp flag and the failure count help separate fat-finger from attack."
-  severityRationale: "Medium baseline. Escalate to High when NewSourceIp is true (success from an IP not seen in the failures) or the failure count is large, both point to a successful credential attack rather than a typo."
+  severityRationale: "Medium baseline. Escalate to High when NewSourceIp is true (the selected success IP was absent from all earlier failures) or the failure count is large, both point to a successful credential attack rather than a typo."
   responseAction: "Confirm with the user; if unrecognised, revoke sessions and reset the credential, then review what the session did after the successful sign-in."

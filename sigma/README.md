@@ -6,7 +6,7 @@ QRadar, …) via `sigma convert`, not locked to Microsoft KQL.
 
 | File | Source rule | ATT&CK | Notes |
 |------|-------------|--------|-------|
-| `DET-002-nsg-rule-modified.yml` | DET-002 | T1562.007 | simple selection |
+| `DET-002-nsg-rule-modified.yml` | DET-002 | T1686.001 | simple selection |
 | `DET-003-rbac-role-assignment.yml` | DET-003 | T1098.003 | simple selection |
 | `DET-004-mass-resource-deletion.yml` | DET-004 | T1485 | **Sigma correlation** (`event_count` ≥ 5 / 5m by caller) |
 
