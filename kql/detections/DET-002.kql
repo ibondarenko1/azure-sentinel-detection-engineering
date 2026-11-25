@@ -1,5 +1,5 @@
 // DET-002, Network Security Group rule modified
-// MITRE: DefenseEvasion / T1562
+// MITRE: DefenseEvasion / T1686.001
 // Source: AzureActivity | Frequency: every 30 min | Lookback: 1h
 // Generated from detections/rules/DET-002-nsg-rule-modified.yaml by cicd/sync-kql-mirror.py, do not edit by hand.
 // soc-nsg-change-principals: SearchKey = objectId of IaC/change-management identities whose

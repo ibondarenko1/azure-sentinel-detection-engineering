@@ -1,10 +1,9 @@
 id: 7a1d2c3e-4b5f-46a7-8c9d-0e1f2a3b4c5d
 name: "[DET] Privilege grant followed by deployment (same principal)"
 description: |
-  A multi-stage correlation: the same principal creates an RBAC role assignment and then deploys
-  a resource (Compute / Storage / Web) within a short window. Either step alone is a single-stage
-  signal (DET-003, DET-005); seeing a principal grant access and immediately use it is the
-  escalation-then-action pattern an atomic rule misses. Deterministic correlation, not a threshold.
+  The same Azure Activity Log caller creates an RBAC role assignment and then deploys a Compute,
+  Storage, or Web resource within 30 minutes. Review the assigned role and its recipient when
+  investigating the sequence.
 severity: High
 requiredDataConnectors:
   - connectorId: AzureActivity
@@ -37,7 +36,7 @@ query: |
       | project DeployTime = TimeGenerated, Caller, DeployOp = OperationNameValue, ResourceId;
   grants
   | join kind=inner deploys on Caller
-  | where DeployTime between (GrantTime .. (GrantTime + corrWindow))
+  | where DeployTime > GrantTime and DeployTime <= (GrantTime + corrWindow)
   | summarize GrantTime = min(GrantTime), FirstDeploy = min(DeployTime),
               DeployedResources = make_set(ResourceId, 20), DeployCount = dcount(ResourceId)
       by Caller, GrantIp
@@ -51,11 +50,11 @@ entityMappings:
       - identifier: Address
         columnName: GrantIp
 metadata:
-  atomic: "T1098 chain, Account Manipulation then resource creation (privilege escalation immediately used)."
+  atomic: "T1098, role assignment and subsequent resource write by the same AzureActivity caller."
   requiredFields: [AzureActivity.OperationNameValue, AzureActivity.ActivityStatusValue, AzureActivity.Caller, AzureActivity.ResourceProviderValue, AzureActivity.Properties_d]
   dataPlane: "AzureActivity control plane; self-join correlating roleAssignments/write to a watched-provider write by the same Caller within 30 minutes."
   falsePositives:
     - "An admin who legitimately grants a role and then deploys in the same session (triage the role and the resource)."
-    - "Automation that assigns a role and immediately provisions; allow-list the principal in soc-automation-principals once confirmed, and DET-003 / DET-005 already exclude it."
-  severityRationale: "High. Escalation followed by immediate action is higher signal than either alone; the correlation reduces the per-stage false positives."
+    - "Approved automation can assign a role and then provision a resource. Check the change record."
+  severityRationale: "High. A role assignment followed by a write from the same caller warrants triage of both the assignment and the resource."
   responseAction: "Treat as a likely escalation chain: confirm the role granted and the deployed resource, disable the principal if unauthorized, and remove both the assignment and the resource."

@@ -7,8 +7,8 @@
 | **Rule type** | Scheduled analytics rule |
 | **Status** | Enabled (v2, IaC allow-list) |
 | **Data source** | `AzureActivity` + `soc-nsg-change-principals` watchlist |
-| **MITRE tactic** | Defense Evasion |
-| **MITRE technique** | [T1562, Impair Defenses](https://attack.mitre.org/techniques/T1562/) |
+| **MITRE tactic** | Defense Impairment |
+| **MITRE technique** | [T1686.001, Cloud Firewall](https://attack.mitre.org/techniques/T1686/001/) |
 
 ## What it catches
 
@@ -60,4 +60,4 @@ This detection's alert appears in the consolidated [consolidated alert queue](..
 
 **Evasion.** An attacker can avoid NSG writes entirely by attaching resources to a permissive existing subnet, modifying a route table or Azure Firewall instead, or disabling NSG flow logs. Treat this as one signal among network-change detections, not a sole control.
 
-**Validation.** Fixture fire/silent in `tests/fixtures/DET-002.json` (run by `tests/run-detection-tests.py` with the watchlist stubbed from the fixture); ATT&CK [T1562.007](https://attack.mitre.org/techniques/T1562/007/), Disable or Modify Cloud Firewall; see [docs/04-validation.md](../docs/04-validation.md).
+**Validation.** The fixture tests both alerting and allow-listed principals. The historical incident retains its original technique label. [Fixture](../tests/fixtures/DET-002.json) · [Validation](../docs/04-validation.md)

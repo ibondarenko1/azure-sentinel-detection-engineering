@@ -78,14 +78,14 @@ flowchart LR
 | ID | Detection | Severity | MITRE tactic | Technique |
 |----|-----------|----------|--------------|-----------|
 | [DET-001](detections/DET-001-failed-activity-log-spike.md) | Failed Activity Log operations spike | Medium | Discovery | [T1087](https://attack.mitre.org/techniques/T1087/) Account Discovery |
-| [DET-002](detections/DET-002-nsg-rule-modified.md) | Network Security Group rule modified | Medium | Defense Evasion | [T1562](https://attack.mitre.org/techniques/T1562/) Impair Defenses |
+| [DET-002](detections/DET-002-nsg-rule-modified.md) | Network Security Group rule modified | Medium | Defense Impairment | [T1686.001](https://attack.mitre.org/techniques/T1686/001/) Cloud Firewall |
 | [DET-003](detections/DET-003-rbac-role-assignment-changes.md) | RBAC role assignment changes | Medium | Privilege Escalation / Persistence | [T1098](https://attack.mitre.org/techniques/T1098/) Account Manipulation |
 | [DET-004](detections/DET-004-mass-resource-deletion.md) | Mass resource deletion | **High** | Impact | [T1485](https://attack.mitre.org/techniques/T1485/) Data Destruction |
 | [DET-005](detections/DET-005-suspicious-deployment-non-owner.md) | Suspicious resource deployment by non-owner | Medium | Persistence | [T1098](https://attack.mitre.org/techniques/T1098/) Account Manipulation |
 | [DET-006](detections/DET-006-lsass-credential-access.md) | LSASS credential access (endpoint) | **High** | Credential Access | [T1003.001](https://attack.mitre.org/techniques/T1003/001/) LSASS Memory |
 | [DET-007](detections/DET-007-rbac-grant-then-deploy.md) | Privilege grant followed by deployment (correlation) | **High** | Privilege Escalation / Persistence | [T1098](https://attack.mitre.org/techniques/T1098/) Account Manipulation |
 | [DET-008](detections/DET-008-signin-success-after-failures.md) | Successful sign-in after repeated failures (identity) | Medium | Credential Access / Initial Access | [T1110](https://attack.mitre.org/techniques/T1110/) Brute Force, [T1078](https://attack.mitre.org/techniques/T1078/) Valid Accounts |
-| [DET-009](detections/DET-009-nsg-opened-inbound-any.md) | Change to an NSG security rule listed as open inbound from Any (ARG) | **High** | Defense Evasion | [T1562.007](https://attack.mitre.org/techniques/T1562/007/) Disable/Modify Cloud Firewall |
+| [DET-009](detections/DET-009-nsg-opened-inbound-any.md) | Change to an NSG security rule listed as open inbound from Any (ARG) | **High** | Defense Impairment | [T1686.001](https://attack.mitre.org/techniques/T1686/001/) Cloud Firewall |
 
 ![Detection rules overview](screenshots/02-detection-rules-overview.png)
 
@@ -115,7 +115,7 @@ A coverage map with explicit gaps is more honest than a list of rules. The [ATT&
 | Covered by the catalog | Known gap, tracked as an issue |
 |-------------------------|---------------------------------|
 | T1087 Account Discovery (DET-001) | [T1530 Data from Cloud Storage](../../issues/12), data-plane detection |
-| T1562.007 Disable/Modify Cloud Firewall (DET-002 / DET-009) | [T1496 Resource Hijacking](../../issues/13), spend/mining anomaly |
+| T1686.001 Cloud Firewall (DET-002 / DET-009) | [T1496 Resource Hijacking](../../issues/13), spend/mining anomaly |
 | T1098 Account Manipulation (DET-003 / DET-005 / DET-007) | [T1526 Cloud Service Discovery](../../issues/14), strengthen heuristic |
 | T1485 Data Destruction (DET-004) | |
 | T1003.001 LSASS Memory (DET-006) | |

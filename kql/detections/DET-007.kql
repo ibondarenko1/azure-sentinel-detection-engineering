@@ -19,7 +19,7 @@ let deploys =
     | project DeployTime = TimeGenerated, Caller, DeployOp = OperationNameValue, ResourceId;
 grants
 | join kind=inner deploys on Caller
-| where DeployTime between (GrantTime .. (GrantTime + corrWindow))
+| where DeployTime > GrantTime and DeployTime <= (GrantTime + corrWindow)
 | summarize GrantTime = min(GrantTime), FirstDeploy = min(DeployTime),
             DeployedResources = make_set(ResourceId, 20), DeployCount = dcount(ResourceId)
     by Caller, GrantIp

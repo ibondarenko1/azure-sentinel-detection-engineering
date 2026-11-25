@@ -21,7 +21,7 @@ triggerThreshold: 0
 tactics:
   - DefenseEvasion
 relevantTechniques:
-  - T1562
+  - T1686.001
 query: |
   // soc-open-mgmt-nsg-rule-ids: refreshed by the manual main-branch nsg-posture-watchlist Action.
   // The additive ID-keyed alias avoids same-name NSG collisions.
@@ -53,7 +53,7 @@ entityMappings:
       - identifier: Address
         columnName: CallerIp
 metadata:
-  atomic: "T1562.007, Disable or Modify Cloud Firewall, content-level triage signal (successful child-rule write matched to a current inbound Allow-from-Any posture row)."
+  atomic: "T1686.001, Cloud Firewall. Successful child-rule write matched to a current inbound Allow-from-Any posture row."
   requiredFields: [AzureActivity.OperationNameValue, AzureActivity.ActivityStatusValue, AzureActivity.Caller, AzureActivity.ResourceId, AzureActivity.Properties_d]
   dataPlane: "AzureActivity child-rule change joined by normalized full resource ID to the Azure Resource Graph snapshot in the additive soc-open-mgmt-nsg-rule-ids watchlist."
   falsePositives:

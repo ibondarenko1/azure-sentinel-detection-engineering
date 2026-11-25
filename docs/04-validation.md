@@ -8,7 +8,7 @@ which lab events model a technique and which mappings are heuristic. The
 
 | Rule | ATT&CK | Atomic technique | Trigger (atomic-aligned) |
 |------|--------|------------------|--------------------------|
-| DET-002 NSG rule modified | T1562.007 | [Disable or Modify Cloud Firewall](https://attack.mitre.org/techniques/T1562/007/) | create + delete an NSG inbound rule |
+| DET-002 NSG rule modified | T1686.001 (historical run used T1562.007) | [Cloud Firewall](https://attack.mitre.org/techniques/T1686/001/) | create + delete an NSG inbound rule |
 | DET-003 RBAC role assignment | T1098.003 | [Additional Cloud Roles](https://attack.mitre.org/techniques/T1098/003/) | assign + remove an Azure RBAC role |
 | DET-004 Mass resource deletion | T1485 | [Data Destruction](https://attack.mitre.org/techniques/T1485/) | bulk-delete ≥5 resources |
 | DET-001 Failed-ops spike | T1087 / T1526 | Account / Cloud Service Discovery (**heuristic**, failed-permission probing, no exact 1:1 atomic) | ≥10 denied control-plane ops |

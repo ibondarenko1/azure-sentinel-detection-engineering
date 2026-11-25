@@ -7,8 +7,8 @@
 | **Rule type** | Scheduled analytics rule (current-posture correlation; companion to DET-002) |
 | **Status** | Enabled |
 | **Data source** | `AzureActivity` + `soc-open-mgmt-nsg-rule-ids` watchlist (Azure Resource Graph) |
-| **MITRE tactic** | Defense Evasion |
-| **MITRE technique** | [T1562.007 Disable or Modify Cloud Firewall](https://attack.mitre.org/techniques/T1562/007/) |
+| **MITRE tactic** | Defense Impairment |
+| **MITRE technique** | [T1686.001, Cloud Firewall](https://attack.mitre.org/techniques/T1686/001/) |
 
 ## Why this exists
 
@@ -149,4 +149,4 @@ retired separately.
 - [Sentinel Watchlists Create or Update API 2025-09-01](https://learn.microsoft.com/rest/api/securityinsights/watchlists/create-or-update?view=rest-securityinsights-2025-09-01)
 
 **Validation.** Fixture fire/silent in `tests/fixtures/DET-009.json` (run by `tests/run-detection-tests.py`
-with the watchlist stubbed); ATT&CK [T1562.007](https://attack.mitre.org/techniques/T1562/007/).
+with the watchlist stubbed). [ATT&CK technique](https://attack.mitre.org/techniques/T1686/001/)

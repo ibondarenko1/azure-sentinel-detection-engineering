@@ -25,17 +25,16 @@ each stage has a detection, and the high-value rules sit where stages join.
 | Initial access (identity) | T1110 Brute Force / T1078 Valid Accounts | DET-008 | A sprayed/guessed credential that finally succeeds is the front door. |
 | Discovery / recon | T1087 Account Discovery | DET-001 | Failed-permission probing reveals an actor mapping what they can touch. |
 | Privilege escalation / persistence | T1098 Account Manipulation | DET-003 | An RBAC grant survives password resets and is the cloud's persistence. |
-| Defense evasion | T1562.007 Disable/Modify Cloud Firewall | DET-002, DET-009 | Opening an NSG inbound from Any weakens the network boundary. |
+| Defense impairment | T1686.001 Cloud Firewall | DET-002, DET-009 | Unexpected NSG changes and writes to rules listed as open warrant review. |
 | Credential access (endpoint) | T1003.001 LSASS Memory | DET-006 | LSASS is the first target after landing on a host. |
 | Impact | T1485 Data Destruction | DET-004 | Mass deletion is destructive impact and a ransom/teardown signal. |
-| **Escalation then action (cross-stage)** | T1098 chain | **DET-007** | Granting access and immediately using it is the behaviour, not either event alone. |
+| **Role assignment then resource change** | T1098 correlation | **DET-007** | The same caller initiates both operations in sequence. Confirm the assignment recipient during triage. |
 
 Two rules are deliberately past single-event matching:
 - **DET-007** correlates two stages (grant then deploy by the same principal) into one high-severity
   signal, lowering the per-stage false positives.
-- **DET-009** is content-aware: it joins the change event to NSG rule config pulled from Azure
-  Resource Graph, so it fires only when a change actually left the NSG open, which the change event
-  alone cannot tell.
+- **DET-009** joins a write to a child NSG rule that the latest Resource Graph snapshot lists as open.
+  The snapshot shows observed posture. Establish the before and after settings during triage.
 
 ## Design principle: build to the telemetry you actually have
 

@@ -1,5 +1,5 @@
 // DET-009, NSG security-rule change on a rule open inbound from Any
-// MITRE: DefenseEvasion / T1562
+// MITRE: DefenseEvasion / T1686.001
 // Source: AzureActivity | Frequency: every 60 min | Lookback: 1h
 // Generated from detections/rules/DET-009-nsg-opened-inbound-any.yaml by cicd/sync-kql-mirror.py, do not edit by hand.
 // soc-open-mgmt-nsg-rule-ids: refreshed by the manual main-branch nsg-posture-watchlist Action.
