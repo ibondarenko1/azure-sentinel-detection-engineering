@@ -17,6 +17,9 @@ and `SecurityAlert`).
   table.
 - Fixtures may also set `expected_counts` when a query's result cardinality matters; DET-006 uses
   `fires: 3` and `silent: 0` to prove that each of its three signal branches contributes.
+- `assertions` can check result context in either scenario. Each entry uses `match` to select one
+  unique row, `fields` for expected values, and optional `time_fields` for timestamps expressed as
+  minutes before the fixture clock. DET-008 checks the IP, app, and time of the same selected sign-in.
 - `run-detection-tests.py`, loads each rule's `query` from `detections/rules/*.yaml`, ingests
   the fixture into the emulator (`.set-or-replace AzureActivity` or `SigninLogs`), runs the
   query, asserts the fire/silent expectation, and rejects untracked coverage gaps.

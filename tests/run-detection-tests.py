@@ -14,6 +14,7 @@ Each fixture targets one table via the optional "table" key (default "AzureActiv
 "SigninLogs" is also supported). Multi-table rules can use a "tables" mapping with a
 fire/silent list per table. Rules that use an allow-list watchlist provide a "watchlist"
 key, which is stubbed into a _GetWatchlist() function so the real query runs unchanged.
+Fixtures may optionally add result-field assertions to pin the context of a returned row.
 
 Env: KUSTO_URI (default http://localhost:8080), KUSTO_DB (default NetDefaultDB).
 """
@@ -94,6 +95,14 @@ def query_count(csl):
     return res["Tables"][0]["Rows"][0][0]
 
 
+def query_rows(csl):
+    """Return the primary query result as dictionaries keyed by column name."""
+    table = _post("/v1/rest/query", {"db": DB, "csl": csl})["Tables"][0]
+    columns = table.get("Columns", [])
+    names = [column["ColumnName"] for column in columns]
+    return [dict(zip(names, row)) for row in table.get("Rows", [])]
+
+
 def lit(col, val, base, dyn):
     if col == "TimeGenerated":
         ts = base - datetime.timedelta(minutes=int(val or 0))
@@ -104,9 +113,10 @@ def lit(col, val, base, dyn):
     return f'"{s}"'
 
 
-def load_table(events, table):
+def load_table(events, table, base=None):
     t = TABLES[table]
-    base = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(seconds=30)
+    if base is None:
+        base = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(seconds=30)
     rows = []
     for e in events:
         rows.append(", ".join(
@@ -114,6 +124,7 @@ def load_table(events, table):
             for c in t["cols"]))
     body = ",\n".join(rows) if rows else ""
     mgmt(f".set-or-replace {table} <| datatable({t['schema']})[\n{body}\n]")
+    return base
 
 
 def _rule_id(path):
@@ -164,6 +175,81 @@ def _validate_scenarios(rid, fixture_data, errors):
     table = fixture_data.get("table", "AzureActivity")
     if table not in TABLES:
         errors.append(f"{rid}: fixture uses unsupported emulator table {table}")
+
+
+def _validate_result_assertions(rid, fixture_data, errors):
+    """Validate optional row-context assertions without changing legacy fixtures."""
+    assertions = fixture_data.get("assertions")
+    if assertions is None:
+        return
+    if not isinstance(assertions, dict):
+        errors.append(f"{rid}: assertions must be a mapping")
+        return
+    if assertions.keys() - {"fires", "silent"}:
+        errors.append(f"{rid}: assertions may only contain fires or silent scenarios")
+    for scenario in ("fires", "silent"):
+        specs = assertions.get(scenario, [])
+        if not isinstance(specs, list):
+            errors.append(f"{rid}: assertions.{scenario} must be a list")
+            continue
+        for index, spec in enumerate(specs, 1):
+            if not isinstance(spec, dict):
+                errors.append(f"{rid}: assertions.{scenario}[{index}] must be a mapping")
+                continue
+            if not any(key in spec for key in ("match", "fields", "time_fields")):
+                errors.append(f"{rid}: assertions.{scenario}[{index}] has no expectation")
+            for key in ("match", "fields", "time_fields"):
+                if key in spec and not isinstance(spec[key], dict):
+                    errors.append(f"{rid}: assertions.{scenario}[{index}].{key} must be a mapping")
+            time_fields = spec.get("time_fields", {})
+            if not isinstance(time_fields, dict):
+                continue
+            for field, minutes_ago in time_fields.items():
+                if not isinstance(minutes_ago, int) or isinstance(minutes_ago, bool) or minutes_ago < 0:
+                    errors.append(
+                        f"{rid}: assertions.{scenario}[{index}].time_fields.{field} "
+                        "must be a non-negative integer"
+                    )
+
+
+def _assert_result_fields(rows, assertions, base):
+    """Check one uniquely matched row's scalar fields and relative timestamps."""
+    failures = []
+    for index, spec in enumerate(assertions, 1):
+        match = spec.get("match", {})
+        candidates = [
+            row for row in rows
+            if all(row.get(field) == expected for field, expected in match.items())
+        ]
+        if len(candidates) != 1:
+            failures.append(
+                f"assertion {index}: expected one row matching {match!r}, got {len(candidates)}"
+            )
+            continue
+        row = candidates[0]
+        mismatches = []
+        for field, expected in spec.get("fields", {}).items():
+            actual = row.get(field)
+            if actual != expected:
+                mismatches.append(f"{field} expected {expected!r}, got {actual!r}")
+        for field, minutes_ago in spec.get("time_fields", {}).items():
+            actual = row.get(field)
+            if not isinstance(actual, str) or base is None:
+                mismatches.append(f"{field} has no comparable timestamp ({actual!r})")
+                continue
+            try:
+                actual_time = datetime.datetime.fromisoformat(actual.replace("Z", "+00:00"))
+            except ValueError:
+                mismatches.append(f"{field} is not an ISO timestamp ({actual!r})")
+                continue
+            expected_time = (base - datetime.timedelta(minutes=minutes_ago)).replace(microsecond=0)
+            if abs((actual_time - expected_time).total_seconds()) > 1:
+                mismatches.append(
+                    f"{field} expected ~{expected_time.isoformat()}, got {actual!r}"
+                )
+        if mismatches:
+            failures.append(f"assertion {index}: {'; '.join(mismatches)}")
+    return failures
 
 
 def load_coverage(rule_paths):
@@ -252,6 +338,7 @@ def load_coverage(rule_paths):
             errors.append(f"{rid}: fixture must be a JSON object")
             continue
         _validate_scenarios(rid, fixture_data, errors)
+        _validate_result_assertions(rid, fixture_data, errors)
         expected_counts = fixture_data.get("expected_counts")
         if expected_counts is not None:
             if not isinstance(expected_counts, dict):
@@ -293,6 +380,8 @@ def main():
     total = 0
     fixture_rules = 0
     live_only_rules = 0
+    field_checks = 0
+    field_failures = 0
     for path in rule_paths:
         rule = yaml.safe_load(open(path, encoding="utf-8"))
         rid = _rule_id(path)
@@ -313,6 +402,7 @@ def main():
                  f"{{ datatable(SearchKey:string)[{vals}] }}")
         for scenario, should_fire in (("fires", True), ("silent", False)):
             table_map = fx.get("tables")
+            table_base = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(seconds=30)
             if table_map is not None:
                 # Replace every declared source table on each scenario so a prior
                 # scenario cannot leak a row into a union query. A multi-table
@@ -321,7 +411,7 @@ def main():
                 # specific syntax for an empty datatable.
                 for table_name, table_info in table_map.items():
                     table_events = table_map.get(table_name, {}).get(scenario, [])
-                    load_table(table_events, table_name)
+                    load_table(table_events, table_name, table_base)
                 events = [
                     event
                     for table_info in table_map.values()
@@ -330,11 +420,17 @@ def main():
             else:
                 table = fx.get("table", "AzureActivity")
                 events = fx.get(scenario, [])
-                load_table(events, table)
+                load_table(events, table, table_base)
             if not events:
                 continue
             total += 1
-            n = query_count(rule["query"])
+            result_assertions = fx.get("assertions", {}).get(scenario, [])
+            if result_assertions:
+                result_rows = query_rows(rule["query"])
+                n = len(result_rows)
+            else:
+                result_rows = []
+                n = query_count(rule["query"])
             expected_counts = fx.get("expected_counts", {})
             if scenario in expected_counts:
                 expected = expected_counts[scenario]
@@ -348,9 +444,17 @@ def main():
             print(f"  [{mark}] {rule['name']} / {scenario}: expected {expected_text}, got {verb} ({n})")
             if not ok:
                 failures += 1
+            if result_assertions:
+                field_checks += len(result_assertions)
+                assertion_failures = _assert_result_fields(result_rows, result_assertions, table_base)
+                field_failures += len(assertion_failures)
+                for assertion_failure in assertion_failures:
+                    print(f"  [FAIL] {rule['name']} / {scenario}: {assertion_failure}")
     print(f"\nCoverage: {fixture_rules} fixture-backed, {live_only_rules} live-only (not run offline)")
     print(f"{total - failures}/{total} fixture assertions passed")
-    sys.exit(1 if failures else 0)
+    if field_checks:
+        print(f"{field_checks - field_failures}/{field_checks} result-field assertions passed")
+    sys.exit(1 if (failures or field_failures) else 0)
 
 
 if __name__ == "__main__":

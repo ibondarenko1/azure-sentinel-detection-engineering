@@ -1,5 +1,5 @@
 {
-  "_comment": "DET-008 (SigninLogs): fires when a user has >=5 failed sign-ins (ResultType != 0) then a success (ResultType 0) after the first failure. Silent for a lone success, fewer than 5 failures, or failures with no later success.",
+  "_comment": "Counts only failures before each success and verifies the selected success context.",
   "table": "SigninLogs",
   "fires": [
     {"minutesAgo": 30, "UserPrincipalName": "victim@contoso.com", "ResultType": "50126", "ResultDescription": "Invalid username or password", "IPAddress": "198.51.100.7", "AppDisplayName": "Azure Portal"},
@@ -7,7 +7,26 @@
     {"minutesAgo": 26, "UserPrincipalName": "victim@contoso.com", "ResultType": "50126", "ResultDescription": "Invalid username or password", "IPAddress": "198.51.100.7", "AppDisplayName": "Azure Portal"},
     {"minutesAgo": 24, "UserPrincipalName": "victim@contoso.com", "ResultType": "50126", "ResultDescription": "Invalid username or password", "IPAddress": "198.51.100.7", "AppDisplayName": "Azure Portal"},
     {"minutesAgo": 22, "UserPrincipalName": "victim@contoso.com", "ResultType": "50126", "ResultDescription": "Invalid username or password", "IPAddress": "198.51.100.7", "AppDisplayName": "Azure Portal"},
-    {"minutesAgo": 10, "UserPrincipalName": "victim@contoso.com", "ResultType": "0", "ResultDescription": "Success", "IPAddress": "198.51.100.7", "AppDisplayName": "Azure Portal"}
+    {"minutesAgo": 10, "UserPrincipalName": "victim@contoso.com", "ResultType": "0", "ResultDescription": "Success", "IPAddress": "198.51.100.7", "AppDisplayName": "Azure Portal"},
+    {"minutesAgo": 44, "UserPrincipalName": "known-ip@example.invalid", "ResultType": "50126", "IPAddress": "198.51.100.1", "AppDisplayName": "Example Portal"},
+    {"minutesAgo": 43, "UserPrincipalName": "known-ip@example.invalid", "ResultType": "50126", "IPAddress": "198.51.100.2", "AppDisplayName": "Example Portal"},
+    {"minutesAgo": 42, "UserPrincipalName": "known-ip@example.invalid", "ResultType": "50126", "IPAddress": "198.51.100.3", "AppDisplayName": "Example Portal"},
+    {"minutesAgo": 41, "UserPrincipalName": "known-ip@example.invalid", "ResultType": "50126", "IPAddress": "198.51.100.4", "AppDisplayName": "Example Portal"},
+    {"minutesAgo": 40, "UserPrincipalName": "known-ip@example.invalid", "ResultType": "50126", "IPAddress": "198.51.100.5", "AppDisplayName": "Example Portal"},
+    {"minutesAgo": 39, "UserPrincipalName": "known-ip@example.invalid", "ResultType": "50126", "IPAddress": "198.51.100.6", "AppDisplayName": "Example Portal"},
+    {"minutesAgo": 38, "UserPrincipalName": "known-ip@example.invalid", "ResultType": "50126", "IPAddress": "198.51.100.7", "AppDisplayName": "Example Portal"},
+    {"minutesAgo": 37, "UserPrincipalName": "known-ip@example.invalid", "ResultType": "50126", "IPAddress": "198.51.100.8", "AppDisplayName": "Example Portal"},
+    {"minutesAgo": 36, "UserPrincipalName": "known-ip@example.invalid", "ResultType": "50126", "IPAddress": "198.51.100.9", "AppDisplayName": "Example Portal"},
+    {"minutesAgo": 35, "UserPrincipalName": "known-ip@example.invalid", "ResultType": "50126", "IPAddress": "198.51.100.10", "AppDisplayName": "Example Portal"},
+    {"minutesAgo": 34, "UserPrincipalName": "known-ip@example.invalid", "ResultType": "50126", "IPAddress": "198.51.100.11", "AppDisplayName": "Example Portal"},
+    {"minutesAgo": 12, "UserPrincipalName": "known-ip@example.invalid", "ResultType": "0", "IPAddress": "198.51.100.11", "AppDisplayName": "Example Portal"},
+    {"minutesAgo": 29, "UserPrincipalName": "multiple-successes@example.invalid", "ResultType": "50126", "IPAddress": "203.0.113.42", "AppDisplayName": "Example Portal"},
+    {"minutesAgo": 30, "UserPrincipalName": "multiple-successes@example.invalid", "ResultType": "50126", "IPAddress": "203.0.113.42", "AppDisplayName": "Example Portal"},
+    {"minutesAgo": 31, "UserPrincipalName": "multiple-successes@example.invalid", "ResultType": "50126", "IPAddress": "203.0.113.42", "AppDisplayName": "Example Portal"},
+    {"minutesAgo": 32, "UserPrincipalName": "multiple-successes@example.invalid", "ResultType": "50126", "IPAddress": "203.0.113.42", "AppDisplayName": "Example Portal"},
+    {"minutesAgo": 33, "UserPrincipalName": "multiple-successes@example.invalid", "ResultType": "50126", "IPAddress": "203.0.113.42", "AppDisplayName": "Example Portal"},
+    {"minutesAgo": 18, "UserPrincipalName": "multiple-successes@example.invalid", "ResultType": "0", "IPAddress": "203.0.113.90", "AppDisplayName": "Zeta Dashboard"},
+    {"minutesAgo": 12, "UserPrincipalName": "multiple-successes@example.invalid", "ResultType": "0", "IPAddress": "203.0.113.10", "AppDisplayName": "Alpha Dashboard"}
   ],
   "silent": [
     {"minutesAgo": 10, "UserPrincipalName": "ok@contoso.com", "ResultType": "0", "ResultDescription": "Success", "IPAddress": "203.0.113.5", "AppDisplayName": "Azure Portal"},
@@ -20,6 +39,51 @@
     {"minutesAgo": 46, "UserPrincipalName": "onlyfails@contoso.com", "ResultType": "50053", "ResultDescription": "Account locked", "IPAddress": "203.0.113.9", "AppDisplayName": "Azure Portal"},
     {"minutesAgo": 44, "UserPrincipalName": "onlyfails@contoso.com", "ResultType": "50053", "ResultDescription": "Account locked", "IPAddress": "203.0.113.9", "AppDisplayName": "Azure Portal"},
     {"minutesAgo": 42, "UserPrincipalName": "onlyfails@contoso.com", "ResultType": "50053", "ResultDescription": "Account locked", "IPAddress": "203.0.113.9", "AppDisplayName": "Azure Portal"},
-    {"minutesAgo": 40, "UserPrincipalName": "onlyfails@contoso.com", "ResultType": "50053", "ResultDescription": "Account locked", "IPAddress": "203.0.113.9", "AppDisplayName": "Azure Portal"}
-  ]
+    {"minutesAgo": 40, "UserPrincipalName": "onlyfails@contoso.com", "ResultType": "50053", "ResultDescription": "Account locked", "IPAddress": "203.0.113.9", "AppDisplayName": "Azure Portal"},
+    {"minutesAgo": 41, "UserPrincipalName": "after-success@example.invalid", "ResultType": "50126", "IPAddress": "192.0.2.17", "AppDisplayName": "Example Portal"},
+    {"minutesAgo": 39, "UserPrincipalName": "after-success@example.invalid", "ResultType": "0", "IPAddress": "192.0.2.17", "AppDisplayName": "Example Portal"},
+    {"minutesAgo": 37, "UserPrincipalName": "after-success@example.invalid", "ResultType": "50126", "IPAddress": "192.0.2.17", "AppDisplayName": "Example Portal"},
+    {"minutesAgo": 35, "UserPrincipalName": "after-success@example.invalid", "ResultType": "50126", "IPAddress": "192.0.2.17", "AppDisplayName": "Example Portal"},
+    {"minutesAgo": 33, "UserPrincipalName": "after-success@example.invalid", "ResultType": "50126", "IPAddress": "192.0.2.17", "AppDisplayName": "Example Portal"},
+    {"minutesAgo": 31, "UserPrincipalName": "after-success@example.invalid", "ResultType": "50126", "IPAddress": "192.0.2.17", "AppDisplayName": "Example Portal"}
+  ],
+  "expected_counts": {"fires": 3, "silent": 0},
+  "assertions": {
+    "fires": [
+      {
+        "match": {
+          "UserPrincipalName": "victim@contoso.com"
+        },
+        "fields": {
+          "Failures": 5,
+          "NewSourceIp": false
+        }
+      },
+      {
+        "match": {
+          "UserPrincipalName": "known-ip@example.invalid"
+        },
+        "fields": {
+          "Failures": 11,
+          "SuccessIP": "198.51.100.11",
+          "NewSourceIp": false
+        }
+      },
+      {
+        "match": {
+          "UserPrincipalName": "multiple-successes@example.invalid"
+        },
+        "fields": {
+          "Failures": 5,
+          "SuccessIP": "203.0.113.90",
+          "App": "Zeta Dashboard",
+          "NewSourceIp": true,
+          "NewIpSuccesses": 2
+        },
+        "time_fields": {
+          "SuccessTime": 18
+        }
+      }
+    ]
+  }
 }

@@ -8,17 +8,29 @@ let failures =
     SigninLogs
     | where TimeGenerated > ago(lookback)
     | where ResultType != "0"
-    | summarize Failures = count(), FailIPs = make_set(IPAddress, 10), FirstFail = min(TimeGenerated)
-        by UserPrincipalName
-    | where Failures >= failThreshold;
-SigninLogs
-| where TimeGenerated > ago(lookback)
-| where ResultType == "0"
-| project SuccessTime = TimeGenerated, UserPrincipalName, SuccessIP = IPAddress, App = AppDisplayName
+    | where isnotempty(UserPrincipalName)
+    | project FailTime = TimeGenerated, UserPrincipalName, FailureIP = IPAddress
+    | distinct FailTime, UserPrincipalName, FailureIP;
+let successes =
+    SigninLogs
+    | where TimeGenerated > ago(lookback)
+    | where ResultType == "0"
+    | where isnotempty(UserPrincipalName)
+    | project SuccessTime = TimeGenerated, UserPrincipalName, SuccessIP = IPAddress, App = AppDisplayName
+    | distinct SuccessTime, UserPrincipalName, SuccessIP, App;
+// Count only failures that occurred before each individual success. This prevents a later
+// failure from retroactively qualifying an earlier success in the same one-hour window.
+successes
 | join kind=inner failures on UserPrincipalName
-| where SuccessTime > FirstFail
-| extend SuccessFromNewIp = array_index_of(FailIPs, SuccessIP) < 0
-| summarize SuccessTime = min(SuccessTime), Failures = max(Failures),
-            NewIpSuccesses = countif(SuccessFromNewIp), SuccessIP = min(SuccessIP), App = min(App)
-    by UserPrincipalName, FirstFail
-| extend NewSourceIp = NewIpSuccesses > 0
+| where FailTime < SuccessTime
+| summarize Failures = count(), FirstFail = min(FailTime),
+            MatchingIPFailures = countif(FailureIP == SuccessIP)
+    by UserPrincipalName, SuccessTime, SuccessIP, App
+| where Failures >= failThreshold
+// Source-IP membership is evaluated across every prior failure row; there is no capped set.
+| extend NewSourceIp = isnotempty(SuccessIP) and MatchingIPFailures == 0
+// One row per user: choose the earliest qualifying success. The fields are selected from
+// that same row, so App, IP, and timestamp cannot be mixed across two successful sign-ins.
+| summarize arg_min(SuccessTime, FirstFail, Failures, SuccessIP, App, NewSourceIp),
+            NewIpSuccesses = countif(NewSourceIp)
+    by UserPrincipalName
