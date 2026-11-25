@@ -5,7 +5,7 @@ The rule YAML in `detections/rules/` defines each scheduled rule. The catalog va
 | Stage | What runs | What it proves |
 |---|---|---|
 | Pull request | `validate` checks the catalog, rule cards, metrics intervals and Navigator coverage, then publishes `sentinel-review-plan`. `unit-tests` checks the KQL mirror and exercises synthetic fixtures. | Reviewers can inspect the Azure payloads and their dependencies. Contributors can run the checks without Azure credentials. |
-| Main branch, deployment enabled | `deploy` enters the protected `sentinel-prod` environment, renders the plan from the checked out revision, obtains OIDC credentials, and applies the catalog. | Sentinel accepted each PUT. A separate GET checks the rule kind, display name, severity, enablement, query, scheduling and trigger settings. |
+| Main branch, deployment enabled | `deploy` renders the plan from the checked-out revision, obtains credentials in the protected `sentinel-prod` environment, and writes rules that are new or changed. | Sentinel accepted each PUT. A separate GET checks the catalog-managed properties, including entity mappings and incident grouping. |
 | Operator workspace check | Run the validator with `--live` against a named Log Analytics workspace. | The workspace can run the queries with its own table schema and watchlist functions. This check does not create incidents. |
 
 The deployer uses the [Sentinel alertRules API](https://learn.microsoft.com/en-us/rest/api/securityinsights/alert-rules/create-or-update?view=rest-securityinsights-2025-09-01). Rule GUIDs are stable across updates. Removing YAML leaves the remote rule in place. To retire a rule, set `enabled: false` and apply that rule while keeping its GUID.
@@ -21,6 +21,13 @@ python cicd/deploy-detections.py plan --output sentinel-plan.json
 ```
 
 `plan` works without Azure CLI, renders a stable payload for each rule, and does not query the live workspace. To narrow the output, pass one or more `--rule DET-NNN` arguments. Deployment supports the same selector.
+
+After signing in to Azure, use `diff` to review the selected workspace. It issues GET requests and
+reports `create`, `update`, or `unchanged` by rule GUID, with the property names that differ.
+
+```bash
+python cicd/deploy-detections.py diff --subscription SUBSCRIPTION_GUID --resource-group RESOURCE_GROUP --workspace WORKSPACE_NAME --rule DET-001
+```
 
 ## Configure the deploy environment
 
@@ -42,14 +49,14 @@ The production job only runs for a matching push to `main` or manual dispatch fr
 
 ## Stage and roll back
 
-Before applying to a workspace, provision the [connectors and watchlists](05-data-dictionary.md) that the selected rules use. In particular, seed the new DET-009 watchlist alias before deploying that revision. The [rule card](../detections/DET-009-nsg-opened-inbound-any.md) describes the order and rollback.
+The [lab bootstrap](12-lab-bootstrap.md) creates or uses a workspace and configures the Activity Log path. Provision the [connectors and watchlists](05-data-dictionary.md) for the rules you select. The [DET-009 rule card](../detections/DET-009-nsg-opened-inbound-any.md) describes its watchlist migration.
 
-Before the first rule write, `apply` checks that the literal watchlist aliases used by enabled rules exist and are ready. Workspace data availability and watchlist contents still need an operator check.
+Before the first rule write, `apply` confirms Sentinel onboarding, reads every selected rule, and checks that the watchlist aliases used by enabled rules are ready. Use the workspace query check to verify data prerequisites.
 
 From an existing Azure CLI sign-in with workspace read permissions, run:
 
 ```bash
-python cicd/validate-detections.py --live --workspace WORKSPACE_CUSTOMER_GUID
+python cicd/validate-detections.py --live --workspace WORKSPACE_CUSTOMER_GUID --rule DET-001
 ```
 
 For an authorized local deployment, pass all three target values or set their corresponding environment variables. The deployer never infers a destination from the active Azure CLI subscription.
@@ -59,4 +66,7 @@ python cicd/deploy-detections.py apply --subscription SUBSCRIPTION_GUID \
   --resource-group RESOURCE_GROUP --workspace WORKSPACE_NAME --rule DET-001
 ```
 
-A deployment is a sequence of rule writes. If a write or readback fails, the job stops and reports the number already verified. Check the failing rule in Sentinel before retrying, since the write can succeed before verification fails. To roll back, revert the unwanted rule revision or reapply a known good revision by the same GUID. Segment connector and watchlist rollbacks separately from rule rollbacks.
+Repeat `diff` after the deployment and confirm that the selected rules are `unchanged`. A repeat
+`apply` performs zero rule writes when the managed properties match. If a write or readback fails,
+the job stops and reports the number of changes already verified. Check the failing rule before
+retrying. To roll back, reapply the known good revision by the same GUID.

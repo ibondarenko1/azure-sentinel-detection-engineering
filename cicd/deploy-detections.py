@@ -19,6 +19,12 @@ ARM = "https://management.azure.com"
 WATCHLIST = re.compile(r"""\b_GetWatchlist\s*\(\s*['"]([^'"]+)['"]\s*\)""")
 
 
+class ArmHttpError(RuntimeError):
+    def __init__(self, method, status, detail=""):
+        self.status = status
+        super().__init__(f"Sentinel {method} returned HTTP {status}{detail}")
+
+
 def build_properties(rule):
     op = TRIGGER_OPERATORS[rule.get("triggerOperator", "gt").lower()]
     # The alertRules API wants parent techniques in `techniques` (T####) and
@@ -41,7 +47,8 @@ def build_properties(rule):
         "suppressionEnabled": False,
         "tactics": rule.get("tactics", []),
         "techniques": parents,
-        "entityMappings": rule.get("entityMappings"),
+        "subTechniques": subs,
+        "entityMappings": rule.get("entityMappings") or [],
         # A scheduled rule whose queryPeriod is wider than its queryFrequency runs over
         # overlapping look-back windows, so the same finding is re-emitted on consecutive
         # runs (see the ingestion-latency case study). Grouping folds those repeat alerts
@@ -58,8 +65,6 @@ def build_properties(rule):
             },
         },
     }
-    if subs:
-        props["subTechniques"] = subs
     return props
 
 
@@ -114,27 +119,65 @@ def arm_request(method, url, token, body=None):
         except (AttributeError, ValueError):
             code = ""
         detail = f" ({code})" if isinstance(code, str) and re.fullmatch(r"[A-Za-z0-9_.-]+", code) else ""
-        raise RuntimeError(f"Sentinel {method} returned HTTP {exc.code}{detail}") from exc
+        raise ArmHttpError(method, exc.code, detail) from exc
     except URLError as exc:
         raise RuntimeError(f"could not reach Azure Resource Manager: {exc.reason}") from exc
     except ValueError as exc:
         raise RuntimeError("Sentinel returned invalid JSON on readback") from exc
 
 
+def normalize_property(field, value):
+    if field in {"queryFrequency", "queryPeriod", "suppressionDuration"}:
+        seconds = duration_seconds(value)
+        return seconds if seconds is not None else value
+    if field in {"query", "description"} and isinstance(value, str):
+        return value.replace("\r\n", "\n").strip()
+    if field in {"tactics", "techniques", "subTechniques", "entityMappings"}:
+        if value is None:
+            return []
+        if isinstance(value, list):
+            if field == "entityMappings":
+                value = [
+                    {**item, "fieldMappings": sorted(item["fieldMappings"], key=_stable_json)}
+                    if isinstance(item, dict) and isinstance(item.get("fieldMappings"), list) else item
+                    for item in value
+                ]
+            return sorted(value, key=_stable_json)
+    if field == "incidentConfiguration" and isinstance(value, dict):
+        grouping = value.get("groupingConfiguration")
+        if isinstance(grouping, dict):
+            lookback = grouping.get("lookbackDuration")
+            value = {
+                "createIncident": value.get("createIncident"),
+                "groupingConfiguration": {
+                    "enabled": grouping.get("enabled"),
+                    "lookbackDuration": normalize_property("queryPeriod", lookback),
+                    "matchingMethod": grouping.get("matchingMethod"),
+                    "reopenClosedIncident": grouping.get("reopenClosedIncident", False),
+                },
+            }
+    return value
+
+
+def _stable_json(value):
+    return json.dumps(value, sort_keys=True)
+
+
 def readback_differences(expected, actual):
     if not isinstance(actual, dict) or not isinstance(actual.get("properties"), dict):
         return ["response shape"]
-    fields = ("displayName", "severity", "enabled", "query", "queryFrequency", "queryPeriod",
-              "triggerOperator", "triggerThreshold")
     differences = ["kind"] if actual.get("kind") != expected["kind"] else []
-    for field in fields:
-        before, after = expected["properties"][field], actual["properties"].get(field)
-        if field in ("queryFrequency", "queryPeriod"):
-            before, after = duration_seconds(before), duration_seconds(after)
-        if field == "query" and isinstance(after, str):
-            before, after = before.strip(), after.strip()
-        if type(before) is not type(after) or before != after:
-            differences.append(field)
+    for field, desired in expected["properties"].items():
+        before = normalize_property(field, desired)
+        after = normalize_property(field, actual["properties"].get(field))
+        if _stable_json(before) != _stable_json(after):
+            if field == "incidentConfiguration" and isinstance(before, dict) and isinstance(after, dict):
+                differences.extend(
+                    f"{field}.{key}" for key in before
+                    if _stable_json(before[key]) != _stable_json(after.get(key))
+                )
+            else:
+                differences.append(field)
     return differences
 
 
@@ -157,14 +200,45 @@ def verify_watchlists(base, plan, token):
             raise RuntimeError(f"Watchlist prerequisite {alias}: {exc}. No rules were written.") from exc
 
 
-def apply_plan(plan, args):
+def inspect_workspace(plan, args):
     base = target_url(args.subscription, args.resource_group, args.workspace)
     token = access_token(f"{ARM}/", args.subscription)
-    verify_watchlists(base, plan, token)
-    print(f"Applying {len(plan['rules'])} rule(s) to {args.resource_group}/{args.workspace}")
-    for index, rule in enumerate(plan["rules"]):
+    version = plan["apiVersion"]
+    onboarding = f"{base}/onboardingStates/default?api-version={version}"
+    try:
+        state = arm_request("GET", onboarding, token)
+    except ArmHttpError as exc:
+        if exc.status == 404:
+            raise RuntimeError("Sentinel onboarding was not found in the selected workspace") from exc
+        raise
+    if not isinstance(state, dict) or not isinstance(state.get("properties"), dict):
+        raise RuntimeError("Sentinel onboarding returned an unexpected response shape")
+    changes = []
+    for rule in plan["rules"]:
         rule_id = rule["ruleId"]
-        url = f"{base}/alertRules/{rule_id}?api-version={plan['apiVersion']}"
+        url = f"{base}/alertRules/{rule_id}?api-version={version}"
+        try:
+            observed = arm_request("GET", url, token)
+        except ArmHttpError as exc:
+            if exc.status != 404:
+                raise
+            changes.append((rule, url, "create", []))
+            continue
+        if not isinstance(observed, dict) or not isinstance(observed.get("properties"), dict):
+            raise RuntimeError(f"{rule['detectionId']}: unexpected rule response shape")
+        differences = readback_differences(rule["body"], observed)
+        changes.append((rule, url, "update" if differences else "unchanged", differences))
+    return base, token, changes
+
+
+def apply_plan(plan, args):
+    base, token, changes = inspect_workspace(plan, args)
+    verify_watchlists(base, plan, token)
+    pending = [change for change in changes if change[2] != "unchanged"]
+    unchanged = len(changes) - len(pending)
+    print(f"Applying {len(pending)} change(s) to {args.resource_group}/{args.workspace}; {unchanged} unchanged")
+    for index, (rule, url, action, _) in enumerate(pending):
+        rule_id = rule["ruleId"]
         try:
             arm_request("PUT", url, token, rule["body"])
             observed = arm_request("GET", url, token)
@@ -172,10 +246,10 @@ def apply_plan(plan, args):
             if differences:
                 raise RuntimeError(f"readback differs on: {', '.join(differences)}")
         except (OSError, RuntimeError) as exc:
-            remaining = len(plan["rules"]) - index - 1
+            remaining = len(pending) - index - 1
             raise RuntimeError(f"{rule['detectionId']}: {exc}. Previously verified: {index}. "
                                f"Later rules not attempted: {remaining}. Verify the failed rule in Azure before retrying.") from exc
-        print(f"  OK {rule['detectionId']} ({rule_id}), readback verified")
+        print(f"  OK {rule['detectionId']} ({rule_id}), {action}, readback verified")
 
 
 def main(argv=None):
@@ -183,11 +257,14 @@ def main(argv=None):
     commands = parser.add_subparsers(dest="command", required=True)
     plan = commands.add_parser("plan", help="render the desired rule bodies offline")
     plan.add_argument("--output", type=Path, help="write the plan to a JSON file")
-    apply = commands.add_parser("apply", help="upsert the selected rules in Azure")
-    apply.add_argument("--subscription", default=os.getenv("AZURE_SUBSCRIPTION_ID"))
-    apply.add_argument("--resource-group", default=os.getenv("SENTINEL_RESOURCE_GROUP"))
-    apply.add_argument("--workspace", default=os.getenv("SENTINEL_WORKSPACE"))
-    for cmd in (plan, apply):
+    diff = commands.add_parser("diff", help="compare the selected rules with Azure using only reads")
+    diff.add_argument("--output", type=Path, help="write the comparison to a JSON file")
+    apply = commands.add_parser("apply", help="write new and changed rules in Azure")
+    for cmd in (diff, apply):
+        cmd.add_argument("--subscription", default=os.getenv("AZURE_SUBSCRIPTION_ID"))
+        cmd.add_argument("--resource-group", default=os.getenv("SENTINEL_RESOURCE_GROUP"))
+        cmd.add_argument("--workspace", default=os.getenv("SENTINEL_WORKSPACE"))
+    for cmd in (plan, diff, apply):
         cmd.add_argument("--rule", action="append", help="include this detection ID (repeatable)")
     args = parser.parse_args(argv)
 
@@ -196,6 +273,13 @@ def main(argv=None):
         if args.command == "apply":
             apply_plan(rendered, args)
         else:
+            if args.command == "diff":
+                _, _, changes = inspect_workspace(rendered, args)
+                rendered = {"apiVersion": rendered["apiVersion"], "rules": [
+                    {"detectionId": rule["detectionId"], "ruleId": rule["ruleId"],
+                     "action": action, "differences": differences}
+                    for rule, _, action, differences in changes
+                ]}
             data = json.dumps(rendered, indent=2, sort_keys=True) + "\n"
             if args.output:
                 args.output.write_text(data, encoding="utf-8", newline="\n")

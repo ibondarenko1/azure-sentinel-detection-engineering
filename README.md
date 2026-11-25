@@ -6,6 +6,7 @@ Nine versioned Microsoft Sentinel analytics rules cover Azure Activity Log, Defe
 |---|---|
 | Evaluate the rules without Azure | [Local checks](#quick-start) and [fixture coverage](tests/README.md) |
 | Review or deploy a change | [Rule delivery and rollback](docs/03-cicd.md) |
+| Start with a clean Azure lab | [Workspace bootstrap](docs/12-lab-bootstrap.md) |
 | Review documented incidents | [Incident investigations](investigations/) and [historical validation results](validation/RESULTS.md) |
 
 ![Historical lab evidence: telemetry, rules, incidents and the CI/CD pipeline](screenshots/demo.gif)
@@ -38,7 +39,7 @@ The catalog includes a sequence rule for a privilege grant followed by a deploym
 
 ## Detection-as-Code
 
-Pull requests validate the catalog and test KQL without Azure. The `validate` job publishes a JSON plan with the rule payloads, required tables and watchlists. When deployment is enabled, the `main` branch applies rules by stable GUID from a protected environment using OIDC and reads back the core settings.
+Pull requests validate the catalog and test KQL without Azure. The `validate` job publishes a JSON plan with rule payloads, required tables and watchlists. `diff` compares the desired rules with an Azure workspace. When deployment is enabled, the `main` branch writes changed rules from a protected OIDC environment and verifies the managed settings by GUID.
 
 ```mermaid
 flowchart LR

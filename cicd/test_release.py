@@ -2,6 +2,7 @@
 
 import copy
 import io
+import json
 import tempfile
 import unittest
 from argparse import Namespace
@@ -24,6 +25,7 @@ def script(name):
 
 deploy = script("deploy-detections")
 validate = script("validate-detections")
+ONBOARDED = {"properties": {"customerManagedKey": False}}
 
 
 class ReleaseTests(unittest.TestCase):
@@ -103,11 +105,13 @@ class ReleaseTests(unittest.TestCase):
             patch.object(deploy, "verify_watchlists"),
             redirect_stdout(io.StringIO()),
         ):
-            with patch.object(deploy, "arm_request", side_effect=[None, first["body"], None, drifted]) as client:
+            absent = deploy.ArmHttpError("GET", 404)
+            responses = [ONBOARDED, absent, absent, absent, None, first["body"], None, drifted]
+            with patch.object(deploy, "arm_request", side_effect=responses) as client:
                 with self.assertRaisesRegex(RuntimeError, r"DET-002: readback differs on: enabled.*Previously verified: 1"):
                     deploy.apply_plan(plan, args)
-        self.assertEqual([call.args[0] for call in client.call_args_list], ["PUT", "GET", "PUT", "GET"])
-        first_url = client.call_args_list[0].args[1]
+        self.assertEqual([call.args[0] for call in client.call_args_list], ["GET"] * 4 + ["PUT", "GET", "PUT", "GET"])
+        first_url = client.call_args_list[4].args[1]
         self.assertIn("/resourceGroups/test-rg/providers/Microsoft.OperationalInsights/workspaces/test-ws/", first_url)
         self.assertIn(f"/{first['ruleId']}?api-version=", first_url)
 
@@ -115,14 +119,62 @@ class ReleaseTests(unittest.TestCase):
         plan = deploy.deployment_plan(self.catalog, ["DET-001", "DET-005"])
         args = Namespace(subscription="00000000-0000-0000-0000-000000000001",
                          resource_group="test-rg", workspace="test-ws")
-        api = Mock(side_effect=RuntimeError("Sentinel GET returned HTTP 404"))
+        missing = deploy.ArmHttpError("GET", 404)
+        api = Mock(side_effect=[ONBOARDED, missing, missing, missing])
         with patch.object(deploy, "access_token", return_value="test-only-token"):
             with patch.object(deploy, "arm_request", api):
                 with self.assertRaisesRegex(RuntimeError, r"soc-deploy-owners: .*No rules were written"):
                     deploy.apply_plan(plan, args)
-        self.assertEqual(api.call_count, 1)
-        self.assertEqual(api.call_args.args[0], "GET")
+        self.assertEqual([call.args[0] for call in api.call_args_list], ["GET"] * 4)
         self.assertIn("/watchlists/soc-deploy-owners?", api.call_args.args[1])
+
+    def test_diff_lists_each_action_and_uses_only_gets(self):
+        plan = deploy.deployment_plan(self.catalog, ["DET-001", "DET-002", "DET-003"])
+        first, second, _ = plan["rules"]
+        drifted = copy.deepcopy(second["body"])
+        drifted["properties"]["entityMappings"] = []
+        drifted["properties"]["incidentConfiguration"]["groupingConfiguration"]["enabled"] = False
+        api = Mock(side_effect=[ONBOARDED, first["body"], drifted, deploy.ArmHttpError("GET", 404)])
+        output = io.StringIO()
+        with patch.object(deploy, "access_token", return_value="fixture"), patch.object(deploy, "arm_request", api):
+            with redirect_stdout(output):
+                self.assertEqual(deploy.main([
+                    "diff", "--subscription", "00000000-0000-0000-0000-000000000001",
+                    "--resource-group", "test-rg", "--workspace", "test-ws",
+                    "--rule", "DET-001", "--rule", "DET-002", "--rule", "DET-003",
+                ]), 0)
+        rules = json.loads(output.getvalue())["rules"]
+        self.assertEqual([rule["action"] for rule in rules], ["unchanged", "update", "create"])
+        self.assertEqual(rules[1]["differences"], ["entityMappings", "incidentConfiguration.groupingConfiguration"])
+        self.assertEqual([call.args[0] for call in api.call_args_list], ["GET"] * 4)
+
+    def test_unchanged_rule_is_not_written(self):
+        plan = deploy.deployment_plan(self.catalog, ["DET-001"])
+        args = Namespace(subscription="00000000-0000-0000-0000-000000000001",
+                         resource_group="test-rg", workspace="test-ws")
+        observed = copy.deepcopy(plan["rules"][0]["body"])
+        props = observed["properties"]
+        props["queryFrequency"] = "PT900S"
+        props["query"] = props["query"].replace("\n", "\r\n")
+        props["incidentConfiguration"]["groupingConfiguration"].pop("reopenClosedIncident")
+        props.pop("subTechniques")
+        api = Mock(side_effect=[ONBOARDED, observed])
+        with patch.object(deploy, "access_token", return_value="fixture"), patch.object(deploy, "arm_request", api):
+            with redirect_stdout(io.StringIO()) as output:
+                deploy.apply_plan(plan, args)
+        self.assertIn("0 change(s)", output.getvalue())
+        self.assertEqual([call.args[0] for call in api.call_args_list], ["GET", "GET"])
+
+    def test_onboarding_404_blocks_any_rule_request(self):
+        plan = deploy.deployment_plan(self.catalog, ["DET-001"])
+        args = Namespace(subscription="00000000-0000-0000-0000-000000000001",
+                         resource_group="test-rg", workspace="test-ws")
+        api = Mock(side_effect=deploy.ArmHttpError("GET", 404))
+        with patch.object(deploy, "access_token", return_value="fixture"), patch.object(deploy, "arm_request", api):
+            with self.assertRaisesRegex(RuntimeError, "Sentinel onboarding was not found"):
+                deploy.apply_plan(plan, args)
+        self.assertEqual(api.call_count, 1)
+        self.assertIn("/onboardingStates/default?", api.call_args.args[1])
 
 
 if __name__ == "__main__":

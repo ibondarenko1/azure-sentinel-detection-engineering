@@ -40,6 +40,7 @@ def main(argv=None):
     parser.add_argument("--live", action="store_true", help="run each rule in Log Analytics with take 0")
     parser.add_argument("--workspace", default=os.getenv("SENTINEL_WORKSPACE_GUID"),
                         help="Log Analytics workspace customer ID for --live")
+    parser.add_argument("--rule", action="append", help="check selected rule IDs (repeatable)")
     args = parser.parse_args(argv)
     if args.live and (not args.workspace or not GUID.fullmatch(args.workspace)):
         parser.error("--live requires a workspace customer ID via --workspace or SENTINEL_WORKSPACE_GUID")
@@ -49,6 +50,11 @@ def main(argv=None):
         evidence_errors = check_evidence(detections)
         if evidence_errors:
             raise CatalogError("\n".join(evidence_errors))
+        if args.rule:
+            unknown = set(args.rule) - {detection.code for detection in detections}
+            if unknown:
+                raise CatalogError(f"unknown detection IDs: {', '.join(sorted(unknown))}")
+            detections = [detection for detection in detections if detection.code in args.rule]
         token = access_token(LOGS_AUDIENCE) if args.live else None
     except (OSError, RuntimeError, ValueError, YAMLError) as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
