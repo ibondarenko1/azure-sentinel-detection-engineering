@@ -7,6 +7,7 @@ Nine versioned Microsoft Sentinel analytics rules cover Azure Activity Log, Defe
 | Evaluate the rules without Azure | [Local checks](#quick-start) and [fixture coverage](tests/README.md) |
 | Review or deploy a change | [Rule delivery and rollback](docs/03-cicd.md) |
 | Start with a clean Azure lab | [Workspace bootstrap](docs/12-lab-bootstrap.md) |
+| Inspect data freshness and rule execution | [Workspace health](docs/13-workspace-health.md) |
 | Review documented incidents | [Incident investigations](investigations/) and [historical validation results](validation/RESULTS.md) |
 
 ![Historical lab evidence: telemetry, rules, incidents and the CI/CD pipeline](screenshots/demo.gif)

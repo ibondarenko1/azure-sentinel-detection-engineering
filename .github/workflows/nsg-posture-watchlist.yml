@@ -58,6 +58,7 @@ jobs:
           python - <<'PY'
           import csv
           import json
+          from datetime import datetime, timezone
 
           result = json.load(open("arg.json", encoding="utf-8"))
           rows = result.get("data")
@@ -87,12 +88,13 @@ jobs:
 
           with open("watchlist.csv", "w", encoding="utf-8", newline="") as handle:
               writer = csv.writer(handle, lineterminator="\n")
-              writer.writerow(["SecurityRuleResourceId", "NsgName", "RuleName", "SourcePrefix", "Ports"])
+              snapshot = datetime.now(timezone.utc).isoformat(timespec="seconds")
+              writer.writerow(["SecurityRuleResourceId", "NsgName", "RuleName", "SourcePrefix", "Ports", "SnapshotUtc"])
               for r in rows:
-                  writer.writerow([str(r.get(k, "")) for k in
-                                   ("securityRuleResourceId", "nsg", "ruleName", "src", "ports")])
+                  values = [str(r.get(k, "")) for k in ("securityRuleResourceId", "nsg", "ruleName", "src", "ports")]
+                  writer.writerow([*values, snapshot])
               if not rows:
-                  writer.writerow(["placeholder-no-open-rules", "", "", "", ""])
+                  writer.writerow(["placeholder-no-open-rules", "", "", "", "", snapshot])
           print(f"{len(rows)} open NSG rule(s)")
           PY
       - name: Refresh additive ID-keyed NSG rule watchlist

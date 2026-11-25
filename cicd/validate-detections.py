@@ -2,36 +2,22 @@
 """Validate the detection catalog offline. Use --live for a workspace KQL check."""
 
 import argparse
-import json
 import os
 import sys
-from urllib.error import HTTPError, URLError
-from urllib.request import Request, urlopen
 
 from yaml import YAMLError
 
 from azure_auth import access_token
 from catalog_evidence import check_evidence
 from detection_rules import GUID, CatalogError, load_catalog
-
-LOGS_ENDPOINT = "https://api.loganalytics.azure.com"
-LOGS_AUDIENCE = "https://api.loganalytics.io"
+from workspace_logs import LOGS_AUDIENCE, WorkspaceQueryError, query_rows
 
 
 def smoke_query(query, workspace, token):
-    url = f"{LOGS_ENDPOINT}/v1/workspaces/{workspace}/query"
-    payload = {"query": query.rstrip().removesuffix(";") + "\n| take 0"}
-    request = Request(url, method="POST", data=json.dumps(payload).encode("utf-8"),
-                      headers={"Content-Type": "application/json", "Authorization": f"Bearer {token}"})
     try:
-        with urlopen(request, timeout=60) as response:
-            result = json.load(response)
-    except HTTPError as exc:
-        return f"Log Analytics HTTP {exc.code}"
-    except (URLError, OSError, ValueError) as exc:
-        return f"Log Analytics request failed: {exc}"
-    if not isinstance(result, dict) or result.get("error") or not result.get("tables"):
-        return "Log Analytics returned an error or partial response"
+        query_rows(workspace, token, query.rstrip().removesuffix(";") + "\n| take 0")
+    except WorkspaceQueryError as exc:
+        return str(exc)
     return None
 
 
