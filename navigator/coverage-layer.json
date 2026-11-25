@@ -2,12 +2,12 @@
   "name": "Azure Sentinel Detection Engineering Coverage",
   "versions": { "attack": "15", "navigator": "4.9.1", "layer": "4.5" },
   "domain": "enterprise-attack",
-  "description": "Coverage of the deployed detections (7 AzureActivity control-plane incl. a multi-stage correlation and an ARG-backed NSG content rule, 1 Defender for Endpoint, 1 Entra ID identity), with honest gaps in the same tactics. Green = covered by a deployed rule; red = known gap.",
+  "description": "Coverage of the rule catalog (7 AzureActivity, 1 Defender for Endpoint, 1 Entra ID). Green = an authored rule or mapped parent technique. Red = known gap. The layer does not report live workspace state.",
   "sorting": 0,
   "hideDisabled": false,
   "techniques": [
     { "techniqueID": "T1087", "score": 100, "color": "#2da44e", "comment": "DET-001 Failed Activity Log operations spike (heuristic, failed-permission probing)" },
-    { "techniqueID": "T1562.007", "score": 100, "color": "#2da44e", "comment": "DET-002 NSG rule change + DET-009 content-confirmed open inbound (ARG)" },
+    { "techniqueID": "T1562.007", "score": 100, "color": "#2da44e", "comment": "DET-002 NSG rule change + DET-009 write to a rule listed as open inbound (ARG snapshot)" },
     { "techniqueID": "T1562", "score": 100, "color": "#2da44e", "comment": "Covered via sub-technique T1562.007 (DET-002 / DET-009)" },
     { "techniqueID": "T1098.003", "score": 100, "color": "#2da44e", "comment": "DET-003 RBAC role assignment changes" },
     { "techniqueID": "T1098", "score": 100, "color": "#2da44e", "comment": "DET-003 (T1098.003) + DET-005 non-owner deployment + DET-007 grant-then-deploy correlation" },
@@ -23,7 +23,7 @@
   ],
   "gradient": { "colors": ["#ffffff", "#2da44e"], "minValue": 0, "maxValue": 100 },
   "legendItems": [
-    { "label": "Covered by a deployed detection", "color": "#2da44e" },
+    { "label": "Mapped to a rule in the catalog", "color": "#2da44e" },
     { "label": "Known gap (not yet covered)", "color": "#e85d4c" }
   ],
   "metadata": [

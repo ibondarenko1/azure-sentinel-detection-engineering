@@ -1,8 +1,6 @@
 name: detection-tests
 
-# Unit-test the detection KQL against synthetic AzureActivity fixtures using a
-# local Kusto emulator (kustainer). No Azure tenant needed, fully reproducible
-# on a fork. Asserts each rule fires on malicious data and stays silent on benign.
+# Execute the authored KQL over synthetic telemetry in the Kusto emulator.
 
 on:
   pull_request:        # runs on every PR so the required check stays consistent
@@ -11,6 +9,10 @@ on:
     paths:
       - "detections/rules/**"
       - "tests/**"
+      - "kql/detections/**"
+      - "cicd/sync-kql-mirror.py"
+      - "requirements.txt"
+      - ".github/workflows/detection-tests.yml"
 
 permissions:
   contents: read
@@ -18,23 +20,26 @@ permissions:
 jobs:
   unit-tests:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     services:
       kusto:
-        image: mcr.microsoft.com/azuredataexplorer/kustainer-linux:latest
+        image: mcr.microsoft.com/azuredataexplorer/kustainer-linux@sha256:81bb7fc1cdda3ee96f725221bbf37b525eca32718d2c2c6a4a6522f84ec97458
         ports: ["8080:8080"]
         env:
           ACCEPT_EULA: "Y"
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with: { python-version: "3.12" }
-      - run: pip install pyyaml
+      - run: python -m pip install -r requirements.txt
       - name: Check kql/detections mirror is in sync with the rule YAML
         run: python cicd/sync-kql-mirror.py --check
       - name: Wait for Kusto emulator
         run: |
           for i in $(seq 1 60); do
-            if curl -s -X POST http://localhost:8080/v1/rest/query \
+            if curl --fail --silent --max-time 3 -X POST http://localhost:8080/v1/rest/query \
                  -H 'Content-Type: application/json' \
                  -d '{"db":"NetDefaultDB","csl":"print 1"}' | grep -q '"Rows"'; then
               echo "emulator ready"; exit 0

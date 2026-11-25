@@ -1,15 +1,15 @@
 # Machine-readable per-detection metrics.
-# truePositivesObserved references the real incidents this repo raised.
-# mttdMinutesObserved = scheduled-rule interval + observed ingestion lag.
+# truePositivesObserved refers to historical lab incidents.
+# estimatedDetectionLatencyMinutes uses the rule interval plus ingestion lag.
+# It is an estimate, not a measured mean time to detect.
 # observedFalsePositiveRate: a single-tenant environment cannot produce a meaningful FP RATE
 # (N is tiny; "0%" at N=1 is absence of data, not a measurement). Each rule states the
 # honest position plus how FP would actually be measured in production: the share of
 # that rule's incidents closed as benign over a rolling 30 days, driven down by tuning
 # (allow-list watchlists, thresholds). Where a benign baseline volume is knowable it is
 # given instead.
-# Measured (not just asserted): the validation/ harness drives a real benign + attack
-# batch and runs each rule's KQL against it. Latest run (validation/RESULTS.md): 5/5
-# attack scenarios fired (DET-002/003/004/007/009), 0 false fires on the benign stream.
+# The historical batch (validation/RESULTS.md) reports 5/5 expected signals and
+# 0 false fires on the benign cases it ran. The DET-009 result used the previous watchlist.
 
 DET-001:
   name: Failed Activity Log operations spike
@@ -17,7 +17,7 @@ DET-001:
   observedFalsePositiveRate: "not measurable at single-tenant scale; in prod = share of these incidents closed-as-benign over 30d. Benign baseline here: 0 callers crossed >=8 failures/5m outside the simulation"
   truePositivesObserved: 1          # incident #4
   ruleIntervalMinutes: 15
-  mttdMinutesObserved: 18
+  estimatedDetectionLatencyMinutes: 18
 
 DET-002:
   name: Network Security Group rule modified
@@ -25,7 +25,7 @@ DET-002:
   observedFalsePositiveRate: "not measurable at single-tenant scale; in prod = share of these incidents closed-as-benign over 30d, driven down by the soc-nsg-change-principals allow-list"
   truePositivesObserved: 1          # incident #5
   ruleIntervalMinutes: 30
-  mttdMinutesObserved: 33
+  estimatedDetectionLatencyMinutes: 33
 
 DET-003:
   name: RBAC role assignment changes
@@ -33,7 +33,7 @@ DET-003:
   observedFalsePositiveRate: "not measurable at single-tenant scale; in prod = share of these incidents closed-as-benign over 30d, driven down by the soc-automation-principals allow-list"
   truePositivesObserved: 1          # incident #2
   ruleIntervalMinutes: 30
-  mttdMinutesObserved: 33
+  estimatedDetectionLatencyMinutes: 33
 
 DET-004:
   name: Mass resource deletion
@@ -41,7 +41,7 @@ DET-004:
   observedFalsePositiveRate: "not measurable at single-tenant scale; in prod = share of these incidents closed-as-benign over 30d. Benign baseline here: 0 teardowns hit >=5 deletes/5m outside the simulation"
   truePositivesObserved: 1          # incident #3 (DeleteCount 8 then 5)
   ruleIntervalMinutes: 15
-  mttdMinutesObserved: 18
+  estimatedDetectionLatencyMinutes: 18
 
 DET-005:
   name: Suspicious resource deployment by non-owner
@@ -49,7 +49,7 @@ DET-005:
   observedFalsePositiveRate: "not measurable at single-tenant scale; in prod = share of these incidents closed-as-benign over 30d, driven down by maintaining the soc-deploy-owners watchlist"
   truePositivesObserved: 1          # incident #1
   ruleIntervalMinutes: 60
-  mttdMinutesObserved: 63
+  estimatedDetectionLatencyMinutes: 63
 
 DET-006:
   name: LSASS credential access
@@ -58,7 +58,7 @@ DET-006:
   observedFalsePositiveRate: "not measurable at single-tenant scale; in prod = share of these incidents closed-as-benign over 30d. Here only the authorised validation attempts fired"
   truePositivesObserved: 1          # incident #65 (controlled T1003.001 attempt, prevented)
   ruleIntervalMinutes: 15
-  mttdMinutesObserved: 18
+  estimatedDetectionLatencyMinutes: 18
 
 DET-007:
   name: Privilege grant followed by deployment (same principal)
@@ -67,7 +67,7 @@ DET-007:
   observedFalsePositiveRate: "not measurable at single-tenant scale; in prod = share of these incidents closed-as-benign over 30d. Lower than either single-stage rule by construction (requires both steps)"
   truePositivesObserved: 1          # live witness: grant 07:54 -> deploy 08:02 by same principal correlated
   ruleIntervalMinutes: 30
-  mttdMinutesObserved: 33
+  estimatedDetectionLatencyMinutes: 33
 
 DET-008:
   name: Successful sign-in after repeated failures
@@ -76,13 +76,13 @@ DET-008:
   observedFalsePositiveRate: "not measurable yet (SigninLogs began flowing this session); in prod = share closed-as-benign over 30d, cut hard by escalating only on NewSourceIp"
   truePositivesObserved: 0          # authored + fixture-validated; live witness pending sign-in data
   ruleIntervalMinutes: 15
-  mttdMinutesObserved: null         # pending first live sign-in burst
+  estimatedDetectionLatencyMinutes: null # pending first live sign-in burst
 
 DET-009:
-  name: NSG rule change exposed inbound from Any
-  dataPlane: "AzureActivity change event joined to ARG-sourced NSG config (soc-open-mgmt-nsg-rules watchlist, refreshed by the nsg-posture-watchlist Action)"
-  expectedEventVolumePerDay: "~0; only NSG changes that leave the NSG open inbound from Any"
-  observedFalsePositiveRate: "not measurable at single-tenant scale; far below DET-002 by construction (requires the NSG to actually be open, not just changed)"
-  truePositivesObserved: 1          # live witness: controlled open-rule (nsg-det9-witness, RDP from *) correlated via ARG watchlist
+  name: NSG security-rule change on a rule open inbound from Any
+  dataPlane: "AzureActivity child-rule write joined to the ARG posture snapshot by full rule ID (soc-open-mgmt-nsg-rule-ids)"
+  expectedEventVolumePerDay: "depends on how often security rules in the open inbound snapshot are updated"
+  observedFalsePositiveRate: "not measured for the resource-ID revision; fixture cases cover cross-NSG and sibling-rule false matches"
+  truePositivesObserved: 1          # historical NSG-name keyed revision; current revision has no live witness
   ruleIntervalMinutes: 60
-  mttdMinutesObserved: 63
+  estimatedDetectionLatencyMinutes: null # current revision needs workspace timing evidence

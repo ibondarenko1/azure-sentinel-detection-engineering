@@ -1,92 +1,71 @@
 #!/usr/bin/env python3
-"""Validate detection rule YAML before deploy (PR gate).
+"""Validate the detection catalog offline. Use --live for a workspace KQL check."""
 
-Always: schema / required-field / value checks (no Azure access needed).
-Optional: KQL smoke check, set SENTINEL_WORKSPACE_GUID (Log Analytics customerId) and be
-`az` logged in; each query is run with `| take 0` to confirm it parses.
-"""
+import argparse
+import json
 import os
 import sys
-import glob
-import re
-import subprocess
+from urllib.error import HTTPError, URLError
+from urllib.request import Request, urlopen
 
-try:
-    import yaml
-except ImportError:
-    sys.exit("PyYAML is required: pip install pyyaml")
+from yaml import YAMLError
 
-RULES_DIR = os.path.join(os.path.dirname(__file__), "..", "detections", "rules")
-GUID = re.compile(r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$")
-SEVERITIES = {"Informational", "Low", "Medium", "High"}
-REQUIRED = ["id", "name", "severity", "query", "queryFrequency", "queryPeriod",
-            "tactics", "relevantTechniques"]
-ISO8601 = re.compile(r"^PT(\d+H)?(\d+M)?(\d+S)?$")
+from azure_auth import access_token
+from catalog_evidence import check_evidence
+from detection_rules import GUID, CatalogError, load_catalog
+
+LOGS_ENDPOINT = "https://api.loganalytics.azure.com"
+LOGS_AUDIENCE = "https://api.loganalytics.io"
 
 
-def check_rule(path):
-    errs = []
+def smoke_query(query, workspace, token):
+    url = f"{LOGS_ENDPOINT}/v1/workspaces/{workspace}/query"
+    payload = {"query": query.rstrip().removesuffix(";") + "\n| take 0"}
+    request = Request(url, method="POST", data=json.dumps(payload).encode("utf-8"),
+                      headers={"Content-Type": "application/json", "Authorization": f"Bearer {token}"})
     try:
-        r = yaml.safe_load(open(path, encoding="utf-8"))
-    except Exception as e:
-        return [f"YAML parse error: {e}"]
-    for k in REQUIRED:
-        if not r.get(k):
-            errs.append(f"missing required field: {k}")
-    if r.get("id") and not GUID.match(str(r["id"])):
-        errs.append(f"id is not a GUID: {r['id']}")
-    if r.get("severity") and r["severity"] not in SEVERITIES:
-        errs.append(f"invalid severity: {r['severity']}")
-    for f in ("queryFrequency", "queryPeriod"):
-        if r.get(f) and not ISO8601.match(str(r[f])):
-            errs.append(f"{f} not ISO8601 duration: {r[f]}")
-    if r.get("relevantTechniques"):
-        for t in r["relevantTechniques"]:
-            if not re.match(r"^T\d{4}(\.\d{3})?$", str(t)):
-                errs.append(f"bad technique id: {t}")
-    op = str(r.get("triggerOperator", "")).lower()
-    if op and op not in ("gt", "lt", "eq", "ne"):
-        errs.append(f"invalid triggerOperator: {r.get('triggerOperator')}")
-    if not r.get("entityMappings"):
-        errs.append("missing entityMappings, every rule should map at least one entity")
-    return errs, r
+        with urlopen(request, timeout=60) as response:
+            result = json.load(response)
+    except HTTPError as exc:
+        return f"Log Analytics HTTP {exc.code}"
+    except (URLError, OSError, ValueError) as exc:
+        return f"Log Analytics request failed: {exc}"
+    if not isinstance(result, dict) or result.get("error") or not result.get("tables"):
+        return "Log Analytics returned an error or partial response"
+    return None
 
 
-def kql_smoke(query, ws_guid):
-    out = subprocess.run(
-        ["az", "monitor", "log-analytics", "query", "--workspace", ws_guid,
-         "--analytics-query", query.strip() + "\n| take 0", "-o", "none"],
-        capture_output=True, text=True, shell=(os.name == "nt"))
-    return out.returncode == 0, (out.stderr.strip() or out.stdout.strip())
+def main(argv=None):
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--live", action="store_true", help="run each rule in Log Analytics with take 0")
+    parser.add_argument("--workspace", default=os.getenv("SENTINEL_WORKSPACE_GUID"),
+                        help="Log Analytics workspace customer ID for --live")
+    args = parser.parse_args(argv)
+    if args.live and (not args.workspace or not GUID.fullmatch(args.workspace)):
+        parser.error("--live requires a workspace customer ID via --workspace or SENTINEL_WORKSPACE_GUID")
 
+    try:
+        detections = load_catalog()
+        evidence_errors = check_evidence(detections)
+        if evidence_errors:
+            raise CatalogError("\n".join(evidence_errors))
+        token = access_token(LOGS_AUDIENCE) if args.live else None
+    except (OSError, RuntimeError, ValueError, YAMLError) as exc:
+        print(f"ERROR: {exc}", file=sys.stderr)
+        return 1
 
-def main():
-    ws_guid = os.environ.get("SENTINEL_WORKSPACE_GUID")
-    files = sorted(glob.glob(os.path.join(RULES_DIR, "*.yaml")))
-    if not files:
-        sys.exit("no rule YAML found")
-    total = 0
-    for path in files:
-        name = os.path.basename(path)
-        res = check_rule(path)
-        errs = res if isinstance(res, list) else res[0]
-        rule = None if isinstance(res, list) else res[1]
-        if not errs and ws_guid and rule:
-            ok, msg = kql_smoke(rule["query"], ws_guid)
-            if not ok:
-                errs.append(f"KQL parse failed: {msg}")
-        if errs:
-            total += len(errs)
-            print(f"FAIL {name}")
-            for e in errs:
-                print(f"   - {e}")
+    failures = 0
+    for detection in detections:
+        error = smoke_query(detection.rule["query"], args.workspace, token) if args.live else None
+        if error:
+            failures += 1
+            print(f"FAIL {detection.file}: {error}", file=sys.stderr)
         else:
-            extra = " (+KQL ok)" if ws_guid else ""
-            print(f"OK   {name}{extra}")
-    if total:
-        sys.exit(f"\n{total} validation error(s)")
-    print(f"\nAll {len(files)} rule(s) valid.")
+            print(f"OK   {detection.file}" + (" (+workspace KQL check)" if args.live else ""))
+    print(f"{len(detections) - failures}/{len(detections)} rules passed "
+          f"{'workspace KQL and catalog' if args.live else 'offline catalog'} validation.")
+    return 1 if failures else 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

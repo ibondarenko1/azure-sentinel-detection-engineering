@@ -7,12 +7,12 @@ the same checks, whether it is mine or a fork's. This guide is the workflow.
 ## The model
 
 ```
-edit rule YAML -> regenerate KQL mirror -> extend test fixture -> run unit tests -> open PR -> CI gates -> review -> merge -> OIDC deploy
+edit rule YAML -> regenerate KQL mirror -> extend fixture -> run checks -> review PR plan -> merge
 ```
 
 - Source of truth for every rule: [`detections/rules/*.yaml`](detections/rules).
 - One human-readable card per rule lives next to it (`detections/DET-00N-*.md`): logic, MITRE mapping, trigger, evidence.
-- The pipeline deploys idempotently by rule GUID; merging to `main` is what pushes a rule to the live workspace. Full mechanics: [docs/03-cicd.md](docs/03-cicd.md).
+- The deployment job writes by rule GUID when deployment is enabled for `main`. See the [delivery runbook](docs/03-cicd.md).
 
 ## Add or change a detection
 
@@ -23,38 +23,33 @@ edit rule YAML -> regenerate KQL mirror -> extend test fixture -> run unit tests
    python cicd/sync-kql-mirror.py
    ```
    CI fails if the mirror is out of sync (`sync-kql-mirror.py --check`), so run this after any query change.
-4. **Extend the test fixture.** Add `fires` and `silent` events to the rule's `tests/fixtures/DET-00N.json` so the new or changed logic is asserted. The fixture format and the columns each event needs are documented in [tests/README.md](tests/README.md).
-5. **Update the rule card** (`detections/DET-00N-*.md`) and, if MITRE coverage changed, the [ATT&CK layer](navigator/coverage-layer.json).
+4. **Extend the test fixture.** Add `fires` and `silent` events to the rule's fixture. A new rule also needs an entry in the [coverage contract](tests/coverage.yaml). See [the test guide](tests/README.md) for the fixture format.
+5. **Update the rule card**, [metrics](detections/metrics.yaml) and [ATT&CK layer](navigator/coverage-layer.json) when the rule or its coverage changes.
 6. **Run the unit tests locally** (next section) until green.
-7. **Open a PR to `main`.** The CI gates below must pass; then it is reviewed and merged, and merge deploys it.
+7. **Open a PR to `main`.** Review the `sentinel-review-plan` artifact with the code diff, particularly any change to scope, schedule, entities or prerequisites.
 
 ## Run the checks locally
 
-Unit tests, no Azure tenant needed (a local Kusto emulator runs each rule's real KQL over the fixtures):
+Run the catalog and release checks with Python:
 
 ```bash
-docker run -d --rm -p 8080:8080 -e ACCEPT_EULA=Y mcr.microsoft.com/azuredataexplorer/kustainer-linux:latest
-pip install pyyaml
-python cicd/sync-kql-mirror.py --check   # mirror in sync
-python tests/run-detection-tests.py      # rules fire on malicious, silent on benign
-```
-
-Schema validation (what the `validate` gate runs):
-
-```bash
+python -m pip install -r requirements.txt
 python cicd/validate-detections.py
+python -m unittest discover -s cicd -p 'test_*.py'
+python cicd/sync-kql-mirror.py --check
+python cicd/deploy-detections.py plan --output sentinel-plan.json
 ```
 
-The live validation harness ([validation/](validation/)) and the regression workflow need a real subscription and `az login`; they are not part of the local loop. See [validation/README.md](validation/README.md).
+Then run the [Kusto fixtures](tests/README.md) for positive and negative cases. Use the [delivery runbook](docs/03-cicd.md) for a separately authorized workspace smoke check.
 
 ## CI gates
 
 Every pull request must pass, before review:
 
 - **detection-tests** ([workflow](.github/workflows/detection-tests.yml)): the unit tests above, plus the KQL-mirror sync check.
-- **validate** ([workflow](.github/workflows/deploy-detections.yml)): rule schema validation.
+- **validate** ([workflow](.github/workflows/deploy-detections.yml)): rule validation, evidence checks, release tests and the offline plan artifact.
 
-`deploy` only runs on merge to `main`, over OIDC, and is a no-op when no `detections/rules/*.yaml` changed (so docs-only PRs do not trigger a Sentinel deploy). A separate [detection-regression](.github/workflows/detection-regression.yml) workflow proves rules still fire in the real tenant.
+`deploy` is opt-in. When enabled, it runs on matching `main` changes or manual dispatch from `main`, using its own protected environment and OIDC identity.
 
 ## Conventions
 

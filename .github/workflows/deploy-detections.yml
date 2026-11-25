@@ -1,61 +1,88 @@
 name: deploy-detections
 
-# Detection-as-Code pipeline:
-#   pull_request -> validate rule YAML (PR gate, blocks merge)
-#   push to main -> deploy rules to Microsoft Sentinel via OIDC (no secrets)
-
 on:
-  pull_request:        # validate runs on every PR (keeps the required check consistent)
+  pull_request:
   push:
     branches: [main]
-    paths:             # deploy only when rules or pipeline change
+    paths:
       - "detections/rules/**"
-      - "cicd/**"
+      - "cicd/deploy-detections.py"
+      - "cicd/detection_rules.py"
+      - "cicd/azure_auth.py"
+      - ".github/workflows/deploy-detections.yml"
+      - "requirements.txt"
+  workflow_dispatch:
 
 permissions:
-  id-token: write      # OIDC token for azure/login
   contents: read
-
-env:
-  SENTINEL_RESOURCE_GROUP: sc200-lab
-  SENTINEL_WORKSPACE: sc200-ws
 
 jobs:
   validate:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with: { python-version: "3.12" }
-      - run: pip install pyyaml
-      - name: Azure login (OIDC, read)
-        uses: azure/login@v2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          client-id: ${{ vars.AZURE_CLIENT_ID }}
-          tenant-id: ${{ vars.AZURE_TENANT_ID }}
-          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
-      - name: Validate rules
-        env:
-          SENTINEL_WORKSPACE_GUID: ${{ vars.SENTINEL_WORKSPACE_GUID }}
-        run: python cicd/validate-detections.py
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with: { python-version: "3.12" }
+      - run: python -m pip install -r requirements.txt
+      - name: Validate rule catalog and release tooling
+        run: |
+          python cicd/validate-detections.py
+          python -m unittest discover -s cicd -p 'test_*.py'
+      - name: Render review plan
+        run: python cicd/deploy-detections.py plan --output sentinel-plan.json
+      - name: Upload review plan
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: sentinel-review-plan
+          path: sentinel-plan.json
+          if-no-files-found: error
 
   deploy:
-    if: github.event_name == 'push'
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
+      vars.SENTINEL_DEPLOY_ENABLED == 'true'
     runs-on: ubuntu-latest
-    environment: sentinel-prod   # optional manual approval gate
+    timeout-minutes: 20
+    environment: sentinel-prod
+    concurrency:
+      group: sentinel-prod-deploy
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      AZURE_SUBSCRIPTION_ID: ${{ vars.SENTINEL_DEPLOY_SUBSCRIPTION_ID }}
+      SENTINEL_RESOURCE_GROUP: ${{ vars.SENTINEL_DEPLOY_RESOURCE_GROUP }}
+      SENTINEL_WORKSPACE: ${{ vars.SENTINEL_DEPLOY_WORKSPACE }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with: { python-version: "3.12" }
-      - run: pip install pyyaml
-      - name: Azure login (OIDC)
-        uses: azure/login@v2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          client-id: ${{ vars.AZURE_CLIENT_ID }}
-          tenant-id: ${{ vars.AZURE_TENANT_ID }}
-          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with: { python-version: "3.12" }
+      - run: python -m pip install -r requirements.txt
+      - name: Validate the release revision
+        run: |
+          python cicd/validate-detections.py
+          python -m unittest discover -s cicd -p 'test_*.py'
+      - name: Render plan for this revision
+        run: python cicd/deploy-detections.py plan --output sentinel-plan.json
+      - name: Upload deployment plan
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: sentinel-release-plan
+          path: sentinel-plan.json
+          if-no-files-found: error
+      - name: Azure login (OIDC)
+        uses: azure/login@a641126d1b8aa4d1fa005f4f92df94a3a4c4c906 # v3.1.0
+        with:
+          client-id: ${{ vars.SENTINEL_DEPLOY_CLIENT_ID }}
+          tenant-id: ${{ vars.SENTINEL_DEPLOY_TENANT_ID }}
+          subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
       - name: Deploy rules to Sentinel
-        env:
-          AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
-        run: python cicd/deploy-detections.py
+        run: python cicd/deploy-detections.py apply

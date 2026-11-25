@@ -9,3 +9,8 @@ desktop.ini
 .vscode/
 .idea/
 validation/.harness-state
+
+# Local Python and release outputs
+__pycache__/
+.venv/
+sentinel-plan.json

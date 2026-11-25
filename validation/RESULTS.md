@@ -1,5 +1,9 @@
 # Validation run results
 
+Historical lab evidence. The original record did not include a run ID, git revision or UTC
+timestamp. The DET-009 row refers to the earlier NSG-name watchlist and does not validate the
+current resource-ID correlation in Azure.
+
 Live mixed-activity run: a benign stream (must stay silent) and an attack stream (must fire),
 measured by running each deployed rule's real KQL against `sc200-ws`. Benign actions are below
 thresholds / outside correlation windows by design, so they do not appear in query output;

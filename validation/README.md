@@ -24,16 +24,12 @@ techniques these rules detect.
 
 All resources live in `sc200-lab`, are prefixed `val-`, and are torn down by `cleanup.sh`.
 
-## Run
+## Reuse status
 
-```bash
-cd validation
-./benign.sh        # legitimate stream (must stay silent)
-./attacks.sh       # attack stream (must fire)
-# wait ~15 min for AzureActivity ingestion
-python measure.py  # writes RESULTS.md
-./cleanup.sh       # tear down
-```
+The scripts document the original lab run. They contain lab-specific Azure targets and a
+legacy DET-009 watchlist format. They are outside the fork quick start and should remain
+parked until the target, resource ownership and watchlist migration are explicit. For a
+repeatable check without an Azure subscription, use the [synthetic fixtures](../tests/README.md).
 
 ## Coverage and honesty
 
