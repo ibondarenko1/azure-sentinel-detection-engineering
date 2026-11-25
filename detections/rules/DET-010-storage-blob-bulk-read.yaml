@@ -1,0 +1,58 @@
+id: 3181e589-04bd-41f5-bda6-4e261fa16553
+name: "[DET] Bulk reads from a monitored Blob container"
+description: |
+  An Entra principal read at least 20 distinct blobs in a monitored container in one ten-minute
+  bucket. Check the workload and source identity during triage. Approved backup principals are
+  scoped to a single account and container in the watchlist.
+severity: Medium
+enabled: false
+deployByDefault: false
+requiredDataConnectors:
+  - connectorId: AzureStorageAccount
+    dataTypes:
+      - StorageBlobLogs
+queryFrequency: PT15M
+queryPeriod: PT1H
+tactics:
+  - Collection
+relevantTechniques:
+  - T1530
+triggerOperator: gt
+triggerThreshold: 0
+query: |
+  let scope = _GetWatchlist('soc-sensitive-blob-reads')
+      | project SearchKey = tolower(tostring(SearchKey));
+  StorageBlobLogs
+  | where TimeGenerated > ago(1h)
+  | where OperationName =~ 'GetBlob' and AuthenticationType =~ 'OAuth'
+  | where toint(StatusCode) between (200 .. 299)
+  | where isnotempty(RequesterTenantId) and isnotempty(RequesterObjectId) and isnotempty(ObjectKey)
+  | extend Container = tolower(extract(@'^https?://[^/]+/([^/?]+)/', 1, Uri)),
+           StorageAccount = tolower(AccountName), StorageResourceId = tolower(_ResourceId),
+           TenantId = tolower(RequesterTenantId), PrincipalId = tolower(RequesterObjectId)
+  | where isnotempty(Container) and isnotempty(StorageAccount)
+  | extend ContainerKey = strcat(StorageAccount, '/', Container)
+  | where strcat('scope:', ContainerKey) in (scope)
+  | where strcat('backup:', ContainerKey, '/', TenantId, '/', PrincipalId) !in (scope)
+  | summarize DistinctBlobs = dcount(ObjectKey), Reads = count(), Bytes = sum(ResponseBodySize),
+              LastRead = max(TimeGenerated)
+      by StorageAccount, Container, StorageResourceId, TenantId, PrincipalId, ReadWindow = bin(TimeGenerated, 10m)
+  | where DistinctBlobs >= 20
+entityMappings:
+  - entityType: AzureResource
+    fieldMappings:
+      - identifier: ResourceId
+        columnName: StorageResourceId
+  - entityType: Account
+    fieldMappings:
+      - identifier: AadTenantId
+        columnName: TenantId
+      - identifier: AadUserId
+        columnName: PrincipalId
+metadata:
+  atomic: "T1530, collection of data from Azure Blob Storage."
+  dataPlane: "Resource-specific Azure Blob Storage read logs in StorageBlobLogs."
+  falsePositives:
+    - "Approved migrations, imaging, indexing, or other authorized bulk reads. Review the named account, container, and workload."
+  severityRationale: "Medium. Volume merits triage while a backup, migration, or other approved job can produce this pattern."
+  responseAction: "Verify the principal and container, check the operational record, and preserve the storage read evidence for investigation."

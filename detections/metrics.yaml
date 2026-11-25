@@ -86,3 +86,12 @@ DET-009:
   truePositivesObserved: 1          # historical NSG-name keyed revision; current revision has no live witness
   ruleIntervalMinutes: 60
   estimatedDetectionLatencyMinutes: null # current revision needs workspace timing evidence
+
+DET-010:
+  name: Bulk reads from a monitored Blob container
+  dataPlane: "StorageBlobLogs StorageRead, OAuth only"
+  expectedEventVolumePerDay: "pending a representative workspace baseline"
+  observedFalsePositiveRate: "fixture evidence only. Live tuning and validation pending."
+  truePositivesObserved: 0
+  ruleIntervalMinutes: 15
+  estimatedDetectionLatencyMinutes: null

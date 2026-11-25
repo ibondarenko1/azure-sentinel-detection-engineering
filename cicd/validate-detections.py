@@ -41,6 +41,8 @@ def main(argv=None):
             if unknown:
                 raise CatalogError(f"unknown detection IDs: {', '.join(sorted(unknown))}")
             detections = [detection for detection in detections if detection.code in args.rule]
+        elif args.live:
+            detections = [detection for detection in detections if detection.rule.get("deployByDefault", True)]
         token = access_token(LOGS_AUDIENCE) if args.live else None
     except (OSError, RuntimeError, ValueError, YAMLError) as exc:
         print(f"ERROR: {exc}", file=sys.stderr)

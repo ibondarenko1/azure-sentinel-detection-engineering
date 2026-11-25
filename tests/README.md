@@ -9,6 +9,8 @@ The [validation guide](../docs/04-validation.md) records the live evidence and w
 data-source reason for each exception. The harness fails if a required fixture is missing.
 DET-006 exercises all three Defender XDR source tables (`DeviceEvents`, `DeviceProcessEvents`,
 and `SecurityAlert`).
+The DET-010 preview uses `StorageBlobLogs` fixtures, including distinct-object counts and scoped
+backup exceptions.
 
 ## Layout
 - `coverage.yaml`, the required rule-to-fixture/live-only coverage contract.

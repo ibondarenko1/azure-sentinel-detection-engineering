@@ -87,6 +87,14 @@ class ReleaseTests(unittest.TestCase):
         auth.assert_not_called()
         self.assertIn("set AZURE_SUBSCRIPTION_ID or --subscription", error.getvalue())
 
+    def test_storage_preview_requires_explicit_selection(self):
+        default_ids = [item["detectionId"] for item in deploy.deployment_plan(self.catalog)["rules"]]
+        self.assertNotIn("DET-010", default_ids)
+        preview, = deploy.deployment_plan(self.catalog, ["DET-010"])["rules"]
+        self.assertFalse(preview["body"]["properties"]["enabled"])
+        self.assertEqual(preview["requiredTables"], ["StorageBlobLogs"])
+        self.assertEqual(preview["watchlists"], ["soc-sensitive-blob-reads"])
+
     def test_apply_rejects_unknown_rule_before_authentication(self):
         with patch.object(deploy, "access_token") as auth, redirect_stderr(io.StringIO()) as error:
             self.assertEqual(deploy.main(["apply", "--rule", "DET-9999"]), 1)

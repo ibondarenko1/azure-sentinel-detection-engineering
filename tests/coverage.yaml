@@ -32,3 +32,6 @@ rules:
   DET-009:
     mode: fixture
     fixture: fixtures/DET-009.json
+  DET-010:
+    mode: fixture
+    fixture: fixtures/DET-010.json

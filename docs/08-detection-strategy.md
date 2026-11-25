@@ -59,7 +59,7 @@ positive, and the fix is to add it, not to loosen the logic.
 
 The gaps are explicit ATT&CK Navigator red cells and live issues, ordered by impact:
 - [#13 T1496 Resource Hijacking](../../issues/13), spend/mining anomaly (cost impact).
-- [#12 T1530 Data from Cloud Storage](../../issues/12), storage data-plane access (collection).
+- [#12 T1530 Data from Cloud Storage](../../issues/12), [DET-010 preview](../detections/DET-010-storage-blob-bulk-read.md) with live baseline and incident evidence pending.
 - [#14 T1526 Cloud Service Discovery](../../issues/14), strengthen the DET-001 heuristic.
 
 They are deferred deliberately, not forgotten: each needs either a data source not yet onboarded or a

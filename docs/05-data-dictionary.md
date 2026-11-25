@@ -12,7 +12,7 @@ requires, so the detection logic is grounded in a known schema, not assumed.
 | `DeviceInfo` / `AlertEvidence` | Defender for Endpoint → Defender XDR connector → workspace | Endpoint hunts |
 | `DeviceTvm*` | Defender Vulnerability Management, advanced hunting | Endpoint hunts, outside the workspace queries |
 | `SigninLogs` | Entra ID diagnostic export | DET-008. A live incident has not been recorded. |
-| `StorageBlobLogs` | Storage data-plane | gap, needed for T1530 |
+| `StorageBlobLogs` | Blob service resource-specific `StorageRead` logs | DET-010, opt-in preview |
 
 The rendered `sentinel-plan.json` lists required tables and literal watchlist aliases per rule.
 Set each watchlist's search key to the column used for the join:
@@ -23,6 +23,7 @@ Set each watchlist's search key to the column used for the join:
 | `soc-automation-principals` | DET-003 | Approved object IDs or UPNs for routine role assignments |
 | `soc-deploy-owners` | DET-005 | Approved deployment principals |
 | `soc-open-mgmt-nsg-rule-ids` | DET-009 | Normalized full ARM resource ID of each open inbound security rule. See the [migration notes](../detections/DET-009-nsg-opened-inbound-any.md). |
+| `soc-sensitive-blob-reads` | DET-010 | Monitored account and container scopes, plus approved backup principals at each scope. [Configuration](../detections/DET-010-storage-blob-bulk-read.md) |
 
 ## `AzureActivity` fields used
 
@@ -49,6 +50,7 @@ Set each watchlist's search key to the column used for the join:
 | DET-007 | Role grant followed by a selected provider write by the same caller | Correlate within 30 minutes | Caller → Account |
 | DET-008 | Failures followed by success for the same identity | Correlate counts and source IP | UserPrincipalName → Account, SuccessIP → IP |
 | DET-009 | Successful security-rule write joined to current ARG posture by exact rule ID | Per matching event | Caller → Account, CallerIp → IP |
+| DET-010 | Successful OAuth `GetBlob` on a monitored container | Distinct blobs in 10 minutes by Entra principal and container | Principal and tenant → Account, storage ID → AzureResource |
 
 These same field names back the [unit-test fixtures](../tests/fixtures) and the
 [Sigma conversions](../sigma) (mapped to the Sigma `azure/activitylogs` taxonomy).

@@ -50,6 +50,14 @@ TABLES = {
                    "AppDisplayName:string, Location:string"),
         "dynamic": set(),
     },
+    "StorageBlobLogs": {
+        "cols": ["TimeGenerated", "AccountName", "OperationName", "AuthenticationType", "StatusCode",
+                 "RequesterTenantId", "RequesterObjectId", "Uri", "ObjectKey", "ResponseBodySize", "_ResourceId"],
+        "schema": ("TimeGenerated:datetime, AccountName:string, OperationName:string, "
+                   "AuthenticationType:string, StatusCode:string, RequesterTenantId:string, RequesterObjectId:string, "
+                   "Uri:string, ObjectKey:string, ResponseBodySize:long, _ResourceId:string"),
+        "dynamic": set(),
+    },
     "DeviceEvents": {
         "cols": ["TimeGenerated", "ActionType", "FileName", "InitiatingProcessFileName",
                  "InitiatingProcessAccountName", "DeviceName"],
@@ -109,6 +117,8 @@ def lit(col, val, base, dyn):
         return f"datetime({ts.strftime('%Y-%m-%dT%H:%M:%S')}Z)"
     if col in dyn:
         return f"dynamic({json.dumps(val or {})})"
+    if col == "ResponseBodySize":
+        return f"long({val})" if type(val) is int else "long(null)"
     s = str(val if val is not None else "").replace("\\", "\\\\").replace('"', '\\"')
     return f'"{s}"'
 

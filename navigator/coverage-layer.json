@@ -17,7 +17,7 @@
     { "techniqueID": "T1078", "score": 100, "color": "#e0a100", "comment": "DET-008 fixture evidence for the sign-in sequence. One pattern within Valid Accounts." },
 
     { "techniqueID": "T1526", "score": 25, "color": "#e85d4c", "comment": "GAP, Cloud Service Discovery: only partially implied by DET-001" },
-    { "techniqueID": "T1530", "score": 25, "color": "#e85d4c", "comment": "GAP, Data from Cloud Storage: no storage data-plane access detection" },
+    { "techniqueID": "T1530", "score": 100, "color": "#e0a100", "comment": "DET-010 preview. OAuth bulk read fixtures pass. Live baseline and incident pending." },
     { "techniqueID": "T1496", "score": 25, "color": "#e85d4c", "comment": "GAP, Resource Hijacking: no crypto-mining / spend-anomaly detection" }
   ],
   "gradient": { "colors": ["#ffffff", "#2da44e"], "minValue": 0, "maxValue": 100 },
@@ -27,7 +27,7 @@
     { "label": "Tracked gap", "color": "#e85d4c" }
   ],
   "metadata": [
-    { "name": "rules", "value": "9 scheduled analytics rules (7 AzureActivity + 1 Defender for Endpoint + 1 Entra ID identity)" },
+    { "name": "rules", "value": "9 default analytics rules and one StorageBlobLogs preview rule" },
     { "name": "repo", "value": "github.com/ibondarenko1/azure-sentinel-detection-engineering" }
   ],
   "showTacticRowBackground": true,

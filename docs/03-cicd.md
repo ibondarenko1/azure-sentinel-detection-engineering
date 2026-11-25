@@ -22,6 +22,10 @@ python cicd/deploy-detections.py plan --output sentinel-plan.json
 
 `plan` works without Azure CLI, renders a stable payload for each rule, and does not query the live workspace. To narrow the output, pass one or more `--rule DET-NNN` arguments. Deployment supports the same selector.
 
+The default deployment includes rules with `deployByDefault` enabled or omitted. Preview rules such
+as DET-010 use `deployByDefault: false` and are included only with explicit `--rule` selection.
+Their `enabled` setting controls alert execution independently of selection.
+
 After signing in to Azure, use `diff` to review the selected workspace. It issues GET requests and
 reports `create`, `update`, or `unchanged` by rule GUID, with the property names that differ.
 

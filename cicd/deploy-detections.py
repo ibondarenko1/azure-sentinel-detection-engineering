@@ -86,7 +86,8 @@ def deployment_plan(detections, selected=()):
                 "watchlists": sorted(set(WATCHLIST.findall(detection.rule["query"]))),
                 "body": {"kind": "Scheduled", "properties": build_properties(detection.rule)},
             }
-            for detection in detections if not selected or detection.code in selected
+            for detection in detections
+            if (detection.code in selected if selected else detection.rule.get("deployByDefault", True))
         ],
     }
 

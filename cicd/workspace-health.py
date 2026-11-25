@@ -151,6 +151,8 @@ def main(argv=None):
             if unknown:
                 raise CatalogError(f"unknown or disabled rules: {', '.join(sorted(unknown))}")
             active = [d for d in active if d.code in args.rule]
+        else:
+            active = [d for d in active if d.rule.get("deployByDefault", True)]
         if not active:
             raise CatalogError("no enabled rules selected")
         token = access_token(LOGS_AUDIENCE)

@@ -82,6 +82,8 @@ def validate_rule(rule):
         errors.append("description must be a string")
     if not isinstance(rule.get("enabled", True), bool):
         errors.append("enabled must be a boolean")
+    if not isinstance(rule.get("deployByDefault", True), bool):
+        errors.append("deployByDefault must be a boolean")
 
     frequency = duration_seconds(rule.get("queryFrequency"))
     period = duration_seconds(rule.get("queryPeriod"))

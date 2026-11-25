@@ -1,6 +1,6 @@
 # Microsoft Sentinel Detection Engineering
 
-Nine versioned Microsoft Sentinel analytics rules cover Azure Activity Log, Defender for Endpoint and Entra sign-ins. The repository includes KQL, synthetic event fixtures, a reviewable deployment plan, and incident evidence from a Sentinel and Defender XDR lab I operated.
+Nine default Microsoft Sentinel analytics rules cover Azure Activity Log, Defender for Endpoint and Entra sign-ins. An opt-in preview adds Blob Storage reads. The repository includes KQL, synthetic event fixtures, a reviewable deployment plan, and incident evidence from a Sentinel and Defender XDR lab I operated.
 
 | Start here | Inspect |
 |---|---|
@@ -88,6 +88,7 @@ flowchart LR
 | [DET-007](detections/DET-007-rbac-grant-then-deploy.md) | Privilege grant followed by deployment (correlation) | **High** | Privilege Escalation / Persistence | [T1098](https://attack.mitre.org/techniques/T1098/) Account Manipulation |
 | [DET-008](detections/DET-008-signin-success-after-failures.md) | Successful sign-in after repeated failures (identity) | Medium | Credential Access / Initial Access | [T1110](https://attack.mitre.org/techniques/T1110/) Brute Force, [T1078](https://attack.mitre.org/techniques/T1078/) Valid Accounts |
 | [DET-009](detections/DET-009-nsg-opened-inbound-any.md) | Change to an NSG security rule listed as open inbound from Any (ARG) | **High** | Defense Impairment | [T1686.001](https://attack.mitre.org/techniques/T1686/001/) Cloud Firewall |
+| [DET-010](detections/DET-010-storage-blob-bulk-read.md) | Bulk Blob Storage reads, opt-in preview | Medium | Collection | [T1530](https://attack.mitre.org/techniques/T1530/) Data from Cloud Storage |
 
 ![Detection rules overview](screenshots/02-detection-rules-overview.png)
 
@@ -112,18 +113,18 @@ The [historical batch](validation/RESULTS.md) recorded five of five expected sig
 
 ## ATT&CK coverage
 
-A coverage map with explicit gaps is more honest than a list of rules. The [ATT&CK Navigator layer](navigator/coverage-layer.json) ([how to load](navigator/README.md)) shows both:
+The [ATT&CK Navigator layer](navigator/coverage-layer.json) records historical lab evidence, fixture evidence, and gaps. [Load the layer](navigator/README.md)
 
-| Covered by the catalog | Known gap, tracked as an issue |
+| Mapped in the default catalog | Tracked extensions |
 |-------------------------|---------------------------------|
-| T1087 Account Discovery (DET-001) | [T1530 Data from Cloud Storage](../../issues/12), data-plane detection |
+| T1087 Account Discovery (DET-001) | [T1530 Data from Cloud Storage](../../issues/12), DET-010 preview with live evidence pending |
 | T1686.001 Cloud Firewall (DET-002 / DET-009) | [T1496 Resource Hijacking](../../issues/13), spend/mining anomaly |
 | T1098 Account Manipulation (DET-003 / DET-005 / DET-007) | [T1526 Cloud Service Discovery](../../issues/14), strengthen heuristic |
 | T1485 Data Destruction (DET-004) | |
 | T1003.001 LSASS Memory (DET-006) | |
 | T1110 Brute Force / T1078 Valid Accounts (DET-008) | |
 
-The gaps are not static text. Each one is a live [`detection-gap` issue](../../issues?q=is%3Aissue+label%3Adetection-gap), so the roadmap is a clickable backlog.
+Follow connector and validation work in the [`detection-gap` issues](../../issues?q=is%3Aissue+label%3Adetection-gap).
 
 **Why these rules and not others:** [docs/08, detection strategy and threat model](docs/08-detection-strategy.md) maps the catalog to a cloud kill chain and risk-ranks the gaps. **How a rule gets tuned:** [docs/09, a measured DET-005 tuning loop](docs/09-tuning-case-study.md) takes a rule from "fires on every write" to a measured zero false positives on the validation harness.
 
